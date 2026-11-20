@@ -177,3 +177,15 @@ def test_stratified_sample_keeps_class_shares() -> None:
     pick = stratified_sample(y, 100, seed=1)
     assert len(pick) == 100 and y.iloc[pick].sum() == 10
     assert len(stratified_sample(y.iloc[:50], 100, seed=1)) == 50
+
+
+def test_known_answers_cli(project: Config) -> None:
+    """Step 2.5 Check: every known answer holds on a synthetic split; test set untouched."""
+    runner.invoke(app, ["data", "split-rq12", "--name", "rq12-syn", "--sets", "SYN-DR-AG"])
+    result = runner.invoke(
+        app, ["mrs", "known-answers", "--split", "rq12-syn", "--max-eval", "300"]
+    )
+    text = (project.reports_dir / "known_answers.md").read_text()
+    assert result.exit_code == 0, text
+    assert "**Check: PASS**" in text and "| year stump | MR1 | expected |" in text
+    assert not (project.root / "logs" / "test_access.jsonl").exists()

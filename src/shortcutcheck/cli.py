@@ -21,6 +21,7 @@ from shortcutcheck.mrs import applicability as appl_mod
 from shortcutcheck.mrs import permissions as perm_mod
 from shortcutcheck.mrs import realism_report as real_mod
 from shortcutcheck.provenance import git_commit
+from shortcutcheck.runner import known_answers as ka_mod
 from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
 
@@ -267,6 +268,27 @@ def mrs_realism(
     text = real_mod.render_markdown(results, commit)
     write_text(cfg.reports_dir / "realism.md", text, cfg.raw_root)
     typer.echo(text)
+
+
+@mrs_app.command("known-answers")
+def mrs_known_answers(
+    split: list[str] | None = typer.Option(None, help="Frozen split(s); default: all five."),
+    max_eval: int = typer.Option(5000, help="Validation apps sampled per split."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 2.5: oracle models with known answers; exits non-zero if any answer is wrong."""
+    cfg = _cfg(config)
+    commit = git_commit(cfg.root)
+    answers = [
+        a
+        for s in (split or appl_mod.default_splits(cfg))
+        for a in ka_mod.check_split(cfg, s, commit, max_eval=max_eval)
+    ]
+    text = ka_mod.render_markdown(answers, commit)
+    write_text(cfg.reports_dir / "known_answers.md", text, cfg.raw_root)
+    typer.echo(text)
+    if not all(a.passes for a in answers):
+        raise typer.Exit(code=1)
 
 
 @app.command("synthetic")
