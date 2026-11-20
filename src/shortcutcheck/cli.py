@@ -287,7 +287,7 @@ def mrs_known_answers(
     text = ka_mod.render_markdown(answers, commit)
     write_text(cfg.reports_dir / "known_answers.md", text, cfg.raw_root)
     typer.echo(text)
-    if not all(a.passes for a in answers):
+    if not all(a.passes for a in answers if a.testable):
         raise typer.Exit(code=1)
 
 

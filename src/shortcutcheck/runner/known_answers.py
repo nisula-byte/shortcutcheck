@@ -56,9 +56,14 @@ class Answer:
     max_abs_delta: float
 
     @property
+    def testable(self) -> bool:
+        """False when the MR changed no input (MR5 on a model that calls nothing malware)."""
+        return self.n_counted > 0
+
+    @property
     def passes(self) -> bool:
-        if self.n_counted == 0:
-            return False
+        if not self.testable:
+            return True
         if self.kind == "exact 0":
             return self.observed == 0.0 and self.max_abs_delta == 0.0
         return abs(self.observed - self.expected) <= self.tolerance
@@ -163,7 +168,8 @@ def check_split(cfg: Config, split: str, commit: str, max_eval: int = 5000) -> l
 
 
 def render_markdown(answers: list[Answer], commit: str) -> str:
-    n_pass = sum(a.passes for a in answers)
+    tested = [a for a in answers if a.testable]
+    n_pass = sum(a.passes for a in tested)
     lines = [
         "# Known-answer tests (roadmap step 2.5)",
         "",
@@ -177,8 +183,12 @@ def render_markdown(answers: list[Answer], commit: str) -> str:
         "from the MR's sampling rule, and it passes if the observed rate is within "
         f"{Z_TOLERANCE:g} standard errors.",
         "",
-        f"**Check: {'PASS' if n_pass == len(answers) else 'FAIL'}** "
-        f"({n_pass} of {len(answers)} known answers).",
+        "- **not testable**: the MR changed no input, e.g. MR5 only changes apps the model "
+        "calls malware, and a constant model may call none malware.",
+        "",
+        f"**Check: {'PASS' if n_pass == len(tested) else 'FAIL'}** "
+        f"({n_pass} of {len(tested)} testable known answers; "
+        f"{len(answers) - len(tested)} not testable).",
         "",
         "| Split | Oracle | MR | Kind | Counted | Observed | Expected | Tolerance "
         "| Max abs. change in p | Result |",
@@ -187,9 +197,16 @@ def render_markdown(answers: list[Answer], commit: str) -> str:
     for a in answers:
         exp = "0" if a.kind == "exact 0" else f"{a.expected:.4f}"
         tol = "exact" if a.kind == "exact 0" else f"±{a.tolerance:.4f}"
+        if not a.testable:
+            lines.append(
+                f"| {a.split} | {a.oracle} | {a.mr_id} | {a.kind} | 0 | – | {exp} | {tol} | – "
+                "| not testable |"
+            )
+            continue
+        delta = "0" if a.max_abs_delta == 0 else f"{a.max_abs_delta:.2e}"
         lines.append(
             f"| {a.split} | {a.oracle} | {a.mr_id} | {a.kind} | {a.n_counted} "
-            f"| {a.observed:.4f} | {exp} | {tol} | {a.max_abs_delta:.4f} "
+            f"| {a.observed:.4f} | {exp} | {tol} | {delta} "
             f"| {'pass' if a.passes else '**FAIL**'} |"
         )
     return "\n".join(lines) + "\n"

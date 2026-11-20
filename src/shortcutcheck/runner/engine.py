@@ -9,8 +9,10 @@ Revision v2 ablation. Confidence intervals come with the metrics step (2.6).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -37,8 +39,33 @@ def model_inputs(model: ProbabilisticModel, x: pd.DataFrame) -> pd.DataFrame:
     return x if names is None else x[list(names)]
 
 
+@contextmanager
+def single_threaded(model: Any) -> Iterator[None]:
+    """Temporarily set every ``n_jobs`` parameter of a scikit-learn model to 1.
+
+    Random forests average their trees in parallel threads, so the summation order (and the
+    last bits of each probability) can change between calls: up to 5.6e-17 on DR-AG. A
+    probability of exactly 0.5 (150 of 300 trees) could then land on either side of the
+    threshold and create a violation that differs between runs. Predicting single-threaded
+    makes every probability, and so every flip, reproducible.
+    """
+    get = getattr(model, "get_params", None)
+    if get is None:
+        yield
+        return
+    saved = {k: v for k, v in get(deep=True).items() if k.endswith("n_jobs") and v != 1}
+    if saved:
+        model.set_params(**{k: 1 for k in saved})
+    try:
+        yield
+    finally:
+        if saved:
+            model.set_params(**saved)
+
+
 def malware_probability(model: ProbabilisticModel, x: pd.DataFrame) -> np.ndarray:
-    proba = np.asarray(model.predict_proba(model_inputs(model, x)), dtype=float)
+    with single_threaded(model):
+        proba = np.asarray(model.predict_proba(model_inputs(model, x)), dtype=float)
     return proba[:, 1] if proba.ndim == 2 else proba
 
 
