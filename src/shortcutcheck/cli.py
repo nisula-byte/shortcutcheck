@@ -375,6 +375,27 @@ def pilot_compare(
         raise typer.Exit(code=1)
 
 
+@app.command("pilot-reproduction")
+def pilot_reproduction(
+    folder: Path = typer.Argument(..., help="Folder with a second machine's pilot CSVs."),
+    label: str = typer.Option(..., help="Machine description, e.g. 'macOS 26, Apple M-series'."),
+    split: str = typer.Option("rq12-DR-AG", help="Frozen split the pilot ran on."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Gate 2: write a per-algorithm comparison of a second machine's pilot run."""
+    cfg = _cfg(config)
+    name = f"pilot_rq1_{split}"
+    text = pilot_mod.render_reproduction(
+        pd.read_csv(cfg.reports_dir / f"{name}.csv"),
+        pd.read_csv(folder / f"{name}.csv"),
+        pd.read_csv(cfg.reports_dir / f"{name}_detection.csv"),
+        pd.read_csv(folder / f"{name}_detection.csv"),
+        label,
+    )
+    write_text(folder / "comparison.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
 @app.command("synthetic")
 def synthetic(
     out_dir: Path,

@@ -105,3 +105,33 @@ def test_compare_identical_matches_and_different() -> None:
     flipped_gate = ref.copy()
     flipped_gate["rate_low"] = 0.0  # no algorithm clearly non-zero any more
     assert compare(ref, flipped_gate).verdict == "DIFFERENT"
+
+
+def test_reproduction_report_breaks_differences_down_by_algorithm() -> None:
+    from shortcutcheck.pilot import render_reproduction
+
+    ref = compare_rows().assign(rate_unfiltered=0.1, delta=0.1)
+    new = ref.copy()
+    rf = new["algorithm"] == "rf"
+    new.loc[rf, "rate"] = 0.12
+    new.loc[rf & (new["feature_set"] == "full"), "n_violations"] = 12
+    det = pd.DataFrame(
+        [
+            {
+                "algorithm": a,
+                "feature_set": f,
+                "seed": s,
+                "f1": 0.9,
+                "pr_auc": 0.9,
+                "roc_auc": 0.9,
+                "fpr_at_95tpr": 0.1,
+            }
+            for a in ALGOS
+            for f in ("full", "behaviour")
+            for s in SEEDS
+        ]
+    )
+    text = render_reproduction(ref, new, det, det, "toy machine")
+    assert "**Verdict: DIFFERENT.**" in text
+    assert "| rf | full | 0.00e+00 | 5 | 0.0200 | 0.0200 |" in text
+    assert "| lr | full | 0.00e+00 | 0 | 0.0000 | 0.0000 |" in text

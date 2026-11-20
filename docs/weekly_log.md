@@ -37,6 +37,14 @@ clearly non-zero on a core MR (MR4 for all; MR1 for RF and LightGBM). LightGBM f
 year effect comes from valid years (LightGBM 38%), not 1980-dated apps (about 0%). MR5/MR6 also
 move behaviour-only models (permissions are behaviour), so they measure permission weighting,
 not metadata shortcuts. MR3 about 0 everywhere.
+Gate 2 reproduction on my MacBook Air (Apple silicon), 21 Nov: `make check` passes (95 tests,
+96% coverage); the Dada zip's SHA-256 matches DATA.md; `make rebuild` verified all five
+splits; `make pilot` gives the same Gate 2 verdict. `make pilot-compare` verdict: DIFFERENT
+(542/750 rows identical, largest rate difference 0.012). LR, LightGBM and MLP are identical,
+SVM violation counts identical; only random forests differ, because scikit-learn's trees are not
+bit-identical across CPU architectures (same-machine reruns are identical). Decision D15: all
+reported numbers come from the reference platform (Linux x86-64); the Mac run is kept in
+reports/reproduction/macos-arm64/ as a cross-architecture check.
 
 ## Week 1 (w/c 23 Nov 2026)
 
