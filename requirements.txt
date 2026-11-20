@@ -1,0 +1,11 @@
+# Pinned for Python 3.11. Change pins only deliberately, and note it in docs/weekly_log.md.
+numpy==2.4.6
+pandas==3.1.1
+scikit-learn==1.9.1
+lightgbm==4.7.0
+scipy==1.17.1
+mlflow==3.18.0
+typer==0.29.2
+pyyaml==6.0.3
+# RQ3 Revision v2 baseline (SHAP metadata share); keep pinned even before approval.
+shap==0.51.0

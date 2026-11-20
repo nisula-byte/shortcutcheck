@@ -1,0 +1,41 @@
+# Phase 1 configuration. Every command reads this file; nothing is hard-coded.
+
+seeds: [11, 22, 33, 44, 55]          # rule 5: five fixed seeds, used everywhere
+
+raw_dir: data/raw/dada-v3.1           # where `shortcutcheck data register` extracts the zip
+collection_year: 2021                 # dex_date after this year counts as invalid (step 1.5)
+android_first_year: 2008              # dex_date before this year counts as invalid (step 1.5)
+dex_date_invalid_threshold: 0.20      # >20% invalid -> drop dex_date, use year alone (step 1.5)
+
+# Columns treated as metadata (MR1-MR4 targets). Everything else numeric is behaviour.
+# Dada's header contains both "APK size"/"Year" and "apk_size"/"year"; confirm in step 1.4.
+metadata_columns:
+  - apk_size
+  - "APK size"
+  - dex_date
+  - year
+  - "Year"
+  - minSdkVersion
+  - targetSdkVersion
+id_column: sha256
+
+# RQ3 data-sufficiency rule (step 1.4). Globs match Dada set names (file stems without
+# ".characteristics.csv"). Fill in the real names after the first `shortcutcheck data audit`.
+rq3_min_per_class_per_year: 1000
+rq3_candidates:
+  AndroCT:
+    early: "*ACT14*"
+    late: "*ACT17*"
+  AZL:
+    early: "*AZL14*"
+    late: "*AZL17*"
+
+# Frozen splits (step 1.7)
+split_seed: 11
+rq12_ratios: [0.70, 0.15, 0.15]
+rq3_val_fraction: 0.20
+
+# Baselines (step 1.8)
+shuffled_label_tolerance: 0.05        # floor for |mean ROC-AUC - 0.5| and |mean PR-AUC - prevalence|
+shuffled_permutations: 20             # shuffled-label models; the check tests their mean
+mlflow_tracking_uri: sqlite:///mlflow.db   # relative to the project root; MLflow 3 retired the file store

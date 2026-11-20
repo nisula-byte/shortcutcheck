@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shortcutcheck"
+version = "0.1.0"
+description = "Label-free metamorphic testing for shortcut learning in Android malware detectors"
+requires-python = ">=3.11,<3.12"
+readme = "README.md"
+
+[project.scripts]
+shortcutcheck = "shortcutcheck.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "mlflow.*", "shap.*", "lightgbm.*"]
+ignore_missing_imports = true

@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Raw and processed data are never committed (Dada is cited by DOI, not re-hosted).
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Frozen split index files ARE committed (roadmap 1.7). Only hashes, no features.
+
+# MLflow local store
+mlruns/
+mlartifacts/
+mlflow.db
+
+# logs/test_access.jsonl is deliberately NOT ignored: commit it. It is the audit trail for
+# "test set touched once" and for the pre-registration date check (roadmap 3.2).
