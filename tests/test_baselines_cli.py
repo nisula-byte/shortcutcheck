@@ -203,3 +203,30 @@ def test_pilot_cli_smoke(project: Config) -> None:
     assert rows["seed"].nunique() == 5 and set(rows["stratum"]) >= {"all", "valid year"}
     assert result.exit_code in (0, 1)
     assert not (project.root / "logs" / "test_access.jsonl").exists()
+
+
+def test_rebuild_reproduces_frozen_splits_and_refuses_a_mismatch(project: Config) -> None:
+    """A second machine rebuilds data/processed exactly; a changed index file is caught."""
+    import gzip
+    import shutil
+
+    runner.invoke(app, ["data", "split-rq12", "--name", "rq12-syn", "--sets", "SYN-DR-AG"])
+    runner.invoke(
+        app, ["data", "split-rq3", "--candidate", "SYN-2014-vs-2017", "--name", "rq3-syn"]
+    )
+    processed = project.processed_dir
+    before = {
+        p.relative_to(processed): gzip.decompress(p.read_bytes()) for p in processed.rglob("*.gz")
+    }
+    shutil.rmtree(processed)  # as on a fresh clone
+    result = runner.invoke(app, ["data", "rebuild"])
+    assert result.exit_code == 0, result.output
+    after = {
+        p.relative_to(processed): gzip.decompress(p.read_bytes()) for p in processed.rglob("*.gz")
+    }
+    assert after == before  # same apps, same columns, same row order
+
+    index = project.splits_dir / "rq12-syn" / "val.txt"
+    index.write_text("\n".join(index.read_text().splitlines()[1:]) + "\n")  # tamper
+    result = runner.invoke(app, ["data", "rebuild"])
+    assert result.exit_code != 0 and "differ from the frozen index" in str(result.exception)
