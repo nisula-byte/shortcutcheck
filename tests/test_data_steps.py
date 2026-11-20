@@ -60,6 +60,16 @@ def test_read_labels_with_and_without_header(tmp_path: Path, header: bool) -> No
     assert labels.set_index("sha256")["label"].to_dict() == {HASH_A: 0, HASH_B: 1}
 
 
+def test_read_labels_dada_v31_three_columns(tmp_path: Path) -> None:
+    """Dada v3.1 format: sha256,malware,dataset. The label must come from 'malware'."""
+    path = tmp_path / "ACT14-training.goodmal.csv"
+    path.write_text(
+        f"sha256,malware,dataset\n{HASH_A},1,androct-malware\n{HASH_B},0,androct-goodware\n"
+    )
+    labels = read_labels(path)
+    assert labels.set_index("sha256")["label"].to_dict() == {HASH_A: 1, HASH_B: 0}
+
+
 def test_read_labels_rejects_unknown_values(tmp_path: Path) -> None:
     path = tmp_path / "x.goodmal.csv"
     path.write_text(f"{HASH_A},maybe\n")
@@ -70,22 +80,44 @@ def test_read_labels_rejects_unknown_values(tmp_path: Path) -> None:
 # --- 1.4 -----------------------------------------------------------------------------------
 
 
-def test_audit_passes_when_both_years_have_enough(project: Config) -> None:
+def test_audit_counts_by_app_year(project: Config) -> None:
     sets = discover_sets(project.raw_dir)
     assert {s.name for s in sets} == {"SYN-DR-AG", "SYN_ACT14", "SYN_ACT17"}
-    summaries, verdicts = audit.run_audit(
+    summaries, verdicts, tables = audit.run_audit(
         sets, project.id_column, project.rq3_candidates, project.rq3_min_per_class_per_year
     )
     by_name = {v.candidate: v for v in verdicts}
-    assert by_name["AndroCT"].passes
-    assert not by_name["AZL"].passes  # no matching sets in the synthetic data
-    text = audit.render_markdown(summaries, verdicts, "synthetic")
-    assert "**Check: PASS.** RQ3 can use: AndroCT." in text
+    syn = by_name["SYN-2014-vs-2017"]
+    assert syn.passes
+    assert syn.sources == ["SYN_ACT14", "SYN_ACT17"]
+    assert not by_name["SYN-missing"].passes  # no matching sets
+    text = audit.render_markdown(summaries, verdicts, "synthetic", tables)
+    assert "**Check: PASS for SYN-2014-vs-2017.**" in text
+    assert "### Apps per year: SYN_ACT14, SYN_ACT17" in text
+
+
+def test_audit_ignores_set_names_and_uses_app_year(tmp_path: Path) -> None:
+    """Dada's ACT14/ACT17 are time barriers: a set called '14' can hold 2017 apps."""
+    folder = tmp_path / "raw"
+    folder.mkdir()
+    rows = []
+    for i in range(40):
+        year = 2014 if i < 20 else 2017
+        rows.append({"sha256": f"{i:064x}", "year": year, "f": i % 2})
+    frame = pd.DataFrame(rows)
+    frame.to_csv(folder / "X14-training.characteristics.csv", index=False)
+    labels = frame[["sha256"]].assign(malware=[i % 2 for i in range(40)], dataset="x")
+    labels.to_csv(folder / "X14-training.goodmal.csv", index=False)
+    cand = {"X": {"labelled": ["X14-*"], "early_years": [2014], "late_years": [2017]}}
+    _, verdicts, _ = audit.run_audit(discover_sets(folder), "sha256", cand, minimum=10)
+    assert verdicts[0].early_counts == (10, 10)
+    assert verdicts[0].late_counts == (10, 10)
+    assert verdicts[0].passes
 
 
 def test_audit_fails_below_minimum(project: Config) -> None:
     sets = discover_sets(project.raw_dir)
-    _, verdicts = audit.run_audit(sets, project.id_column, project.rq3_candidates, 10**6)
+    _, verdicts, _ = audit.run_audit(sets, project.id_column, project.rq3_candidates, 10**6)
     assert not any(v.passes for v in verdicts)
     assert "VirusShare-per-year fallback" in audit.render_markdown([], verdicts, "x")
 

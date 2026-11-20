@@ -45,8 +45,19 @@ def make_read_only(folder: Path) -> int:
     return count
 
 
+def _relative(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def register_zip(zip_path: Path, extract_to: Path, data_md: Path) -> str:
-    """Hash, extract once, lock, and log. Returns the SHA-256."""
+    """Hash, extract once, lock, and log. Returns the SHA-256.
+
+    The extraction path is logged relative to the folder holding DATA.md (the project root),
+    so the record stays valid on every machine.
+    """
     if extract_to.exists() and any(extract_to.iterdir()):
         raise FileExistsError(
             f"{extract_to} already holds data. Raw data is registered once; "
@@ -66,7 +77,7 @@ def register_zip(zip_path: Path, extract_to: Path, data_md: Path) -> str:
     stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
     row = (
         f"| {stamp} | {zip_path.name} | {zip_path.stat().st_size} | `{digest}` | "
-        f"{extract_to.as_posix()} |\n"
+        f"{_relative(extract_to, data_md.parent)} |\n"
     )
     with data_md.open("a", encoding="utf-8") as handle:
         handle.write(row)

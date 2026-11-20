@@ -13,6 +13,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
+
+SYNTHETIC_CANDIDATES = {
+    "SYN-2014-vs-2017": {"labelled": ["SYN_ACT1*"], "early_years": [2014], "late_years": [2017]},
+}
 
 N_BEHAVIOUR = 30
 INFORMATIVE = 6  # behaviour flags that genuinely depend on the label
@@ -97,3 +102,12 @@ def make_synthetic_dada(out_dir: Path, seed: int = 0, scale: float = 1.0) -> Pat
             if path.is_file():
                 archive.write(path, path.relative_to(out_dir))
     return zip_path
+
+
+def write_synthetic_config(base_config: Path, out_path: Path) -> Path:
+    """Copy a config, pointing its RQ3 candidates at the synthetic sets."""
+    config = yaml.safe_load(base_config.read_text(encoding="utf-8"))
+    config["rq3_candidates"] = SYNTHETIC_CANDIDATES
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    return out_path

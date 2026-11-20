@@ -19,16 +19,38 @@ metadata_columns:
   - targetSdkVersion
 id_column: sha256
 
-# RQ3 data-sufficiency rule (step 1.4). Globs match Dada set names (file stems without
-# ".characteristics.csv"). Fill in the real names after the first `shortcutcheck data audit`.
+# RQ3 data-sufficiency rule (step 1.4). Dada's ACT14/ACT17 and AZL14/AZL17 names are time
+# barriers that cut ONE app pool into training/test parts (ACT14 and ACT17 share ~27k hashes),
+# so RQ3 pools a family's apps and selects them by each app's own `year` (= year of dex_date).
+# A candidate passes if early and late windows each hold >= the minimum per class.
+# Each candidate gives `goodware` + `malware` set globs, or `labelled` globs (.goodmal.csv).
 rq3_min_per_class_per_year: 1000
 rq3_candidates:
-  AndroCT:
-    early: "*ACT14*"
-    late: "*ACT17*"
-  AZL:
-    early: "*AZL14*"
-    late: "*AZL17*"
+  AndroCT-2014-vs-2017:            # the design as pre-registered in the proposal
+    goodware: ACT-G
+    malware: ACT-M
+    early_years: [2014]
+    late_years: [2017]
+  AndroCT-2013-14-vs-2017-18:
+    goodware: ACT-G
+    malware: ACT-M
+    early_years: [2013, 2014]
+    late_years: [2017, 2018]
+  AndroCT-2012-14-vs-2017-19:
+    goodware: ACT-G
+    malware: ACT-M
+    early_years: [2012, 2013, 2014]
+    late_years: [2017, 2018, 2019]
+  AZL-2014-vs-2017:
+    goodware: AZL-G
+    malware: AZL-M
+    early_years: [2014]
+    late_years: [2017]
+  AZL-2013-14-vs-2017-18:
+    goodware: AZL-G
+    malware: AZL-M
+    early_years: [2013, 2014]
+    late_years: [2017, 2018]
 
 # Frozen splits (step 1.7)
 split_seed: 11

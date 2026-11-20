@@ -36,7 +36,7 @@ class Config:
     metadata_columns: list[str]
     id_column: str
     rq3_min_per_class_per_year: int
-    rq3_candidates: dict[str, dict[str, str]]
+    rq3_candidates: dict[str, dict[str, Any]]
     split_seed: int
     rq12_ratios: list[float]
     rq3_val_fraction: float

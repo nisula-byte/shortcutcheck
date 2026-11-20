@@ -74,7 +74,7 @@ def test_phase1_pipeline_end_to_end(project: Config) -> None:
     assert result.exit_code == 0, result.output
     result = runner.invoke(
         app,
-        ["data", "split-rq3", "--name", "rq3-syn", "--early", "SYN_ACT14", "--late", "SYN_ACT17"],
+        ["data", "split-rq3", "--candidate", "SYN-2014-vs-2017", "--name", "rq3-syn"],
     )
     assert result.exit_code == 0, result.output
 

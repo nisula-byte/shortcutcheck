@@ -14,9 +14,10 @@ def test_repo_config_loads() -> None:
     assert len(cfg.seeds) == 5
     assert sum(cfg.rq12_ratios) == pytest.approx(1.0)
     assert "year" in cfg.metadata_columns
+    assert "AndroCT-2014-vs-2017" in cfg.rq3_candidates
 
 
 def test_config_rejects_wrong_seed_count(tmp_path: Path) -> None:
-    root = make_project(tmp_path, seeds="[1, 2, 3]")
+    root = make_project(tmp_path, seeds=[1, 2, 3])
     with pytest.raises(ValueError, match="five seeds"):
         load_config(root=root)
