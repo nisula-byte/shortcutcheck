@@ -149,3 +149,11 @@ def test_mr_applicability_cli(project: Config) -> None:
     text = (project.reports_dir / "mr_applicability.md").read_text()
     assert "| rq12-syn |" in text and "MR1" in text
     assert not (project.root / "logs" / "test_access.jsonl").exists()
+
+
+def test_permission_levels_cli(project: Config) -> None:
+    """Step 2.3 Check: a mapping table with a source link per feature."""
+    result = runner.invoke(app, ["mrs", "permissions"])
+    assert result.exit_code == 0, result.output
+    text = (project.reports_dir / "permission_levels.md").read_text()
+    assert text.count("[docs](https://developer.android.com/") == 34

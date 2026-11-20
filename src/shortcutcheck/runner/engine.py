@@ -15,7 +15,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-from shortcutcheck.mrs.base import MetamorphicRelation, changed_columns, changed_rows
+from shortcutcheck.mrs.base import MetamorphicRelation, Violation, changed_columns, changed_rows
 
 
 class ProbabilisticModel(Protocol):
@@ -52,6 +52,7 @@ class MRRun:
     valid: np.ndarray
     threshold: float = 0.5
     seed: int = 0
+    direction: Violation = "any"
     notes: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -66,6 +67,15 @@ class MRRun:
         return np.asarray(before != after, dtype=bool)
 
     @property
+    def violated(self) -> np.ndarray:
+        """Flips that break the relation: any flip, or only malware -> goodware (MR6)."""
+        if self.direction == "any":
+            return self.flipped
+        before = self.p_before >= self.threshold
+        after = self.p_after >= self.threshold
+        return np.asarray(before & ~after, dtype=bool)
+
+    @property
     def n_inputs(self) -> int:
         return len(self.p_before)
 
@@ -75,11 +85,11 @@ class MRRun:
 
     @property
     def n_violations(self) -> int:
-        return int((self.flipped & self.counted).sum())
+        return int((self.violated & self.counted).sum())
 
     @property
     def violation_rate(self) -> float:
-        """Share of counted inputs whose predicted class flipped (NaN if none counted)."""
+        """Share of counted inputs that violate the relation (NaN if none counted)."""
         return self.n_violations / self.n_counted if self.n_counted else float("nan")
 
     @property
@@ -113,4 +123,5 @@ def run_mr(
         valid=mr.is_valid(x_new),
         threshold=threshold,
         seed=seed,
+        direction=mr.violation,
     )
