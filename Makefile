@@ -1,4 +1,4 @@
-.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag
+.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability
 
 setup:
 	python -m pip install -r requirements-dev.txt
@@ -42,3 +42,7 @@ baselines:
 # About 100k training apps: run on a machine with several cores (1-2 hours).
 baselines-vs-ag:
 	shortcutcheck baselines --split rq12-VS-AG
+
+# Phase 2, step 2.2: which core MRs apply to each frozen split (training partitions only).
+mr-applicability:
+	shortcutcheck mrs applicability
