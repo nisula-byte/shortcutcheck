@@ -23,3 +23,6 @@ mlflow.db
 
 # logs/test_access.jsonl is deliberately NOT ignored: commit it. It is the audit trail for
 # "test set touched once" and for the pre-registration date check (roadmap 3.2).
+
+# macOS Finder metadata
+.DS_Store

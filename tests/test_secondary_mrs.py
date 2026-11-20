@@ -175,3 +175,16 @@ def test_direction_on_a_hand_computed_example() -> None:
     # Flips: row 0 (malware -> goodware) and row 1 (goodware -> malware).
     assert MRRun(**kw).n_violations == 2  # type: ignore[arg-type]
     assert MRRun(**kw, direction="to_goodware").n_violations == 1  # type: ignore[arg-type]
+
+
+def test_untouched_unusual_values_do_not_invalidate_an_app() -> None:
+    """Regression (found by Hypothesis): validity is judged only on columns the MR can change."""
+    train = pd.DataFrame({c: 0 for c in PERMS}, index=range(40))
+    train[P + "CAMERA"] = 0
+    train.loc[:20, P + "SEND_SMS"] = 1
+    mr = AddDangerousPermission(PERMS, min_apps=5).fit(train)
+    assert mr.columns_touched == (P + "SEND_SMS",)
+    app = train.iloc[[30]].copy()
+    app[P + "BODY_SENSORS"] = 1  # no training app has it, but MR6 cannot add or remove it
+    after = mr.transform(app, rng=np.random.default_rng(0))
+    assert after[P + "SEND_SMS"].iloc[0] == 1 and mr.is_valid(after).all()

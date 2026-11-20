@@ -90,11 +90,29 @@ make pilot-compare    # compares your run with the committed results
 | --- | --- | --- |
 | `IDENTICAL` | every count and rate equal | passes |
 | `MATCHES` | every rate within 0.01, same Gate 2 verdict | passes; note the largest difference |
-| `DIFFERENT` | larger differences, or a different Gate 2 verdict | fails; investigate |
+| `DIFFERENT` | larger differences, or a different Gate 2 verdict | investigate (see below) |
 
-`MATCHES` is acceptable. macOS uses Apple's Accelerate maths library and Linux uses OpenBLAS,
-so the linear models and the MLP can differ in the last digits. The tree models (random forest,
-LightGBM) are expected to match exactly.
+What to expect on a different processor type (decision D15). On the same machine, two runs
+are identical. Across processor architectures (Apple silicon arm64 vs Intel/AMD x86-64), the
+first reproduction (`reports/reproduction/macos-arm64/`) found:
+
+- logistic regression, LightGBM and the MLP are **identical**;
+- the linear SVM differs in the 4th decimal place of its accuracy, with identical violation
+  counts;
+- **random forests are trained slightly differently**: scikit-learn's tree building is not
+  bit-identical across processor types. Violation rates moved by up to 0.009 (0.012 within a
+  subgroup), so the verdict was `DIFFERENT` under the 0.01 rule, with the same Gate 2 verdict.
+
+So on another architecture, a `DIFFERENT` verdict that comes only from random forest rows, with
+the same Gate 2 verdict, repeats the known cross-architecture effect. Check the per-algorithm
+table:
+
+```bash
+shortcutcheck pilot-reproduction reports/reproduction/<machine> --label "<machine description>"
+```
+
+after copying your two pilot CSVs into `reports/reproduction/<machine>/`. All reported numbers
+come from the reference platform (Linux x86-64).
 
 ## 8. Record the result and clean up
 

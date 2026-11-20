@@ -68,6 +68,10 @@ class _AddPermission(MetamorphicRelation):
                 f"{self.mr_id}: no eligible permission is "
                 + self.rule.format(min_apps=self.min_apps)
             )
+        # Only pool columns can change, so only they are declared and range-checked. Checking
+        # every eligible column would mark an app invalid for a value the MR never touched.
+        self._columns_touched = tuple(self.pool)
+        self._ranges = {c: self.ranges[c] for c in self.pool}
 
 
 class AddNormalPermission(_AddPermission):
