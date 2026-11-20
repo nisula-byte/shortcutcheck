@@ -157,3 +157,23 @@ def test_permission_levels_cli(project: Config) -> None:
     assert result.exit_code == 0, result.output
     text = (project.reports_dir / "permission_levels.md").read_text()
     assert text.count("[docs](https://developer.android.com/") == 34
+
+
+def test_realism_cli(project: Config) -> None:
+    """Step 2.4: realism report on a synthetic split, logged in MLflow, test set untouched."""
+    runner.invoke(app, ["data", "split-rq12", "--name", "rq12-syn", "--sets", "SYN-DR-AG"])
+    result = runner.invoke(app, ["mrs", "realism", "--split", "rq12-syn", "--max-eval", "200"])
+    assert result.exit_code == 0, result.output
+    text = (project.reports_dir / "realism.md").read_text()
+    assert "| rq12-syn |" in text and "MR1" in text
+    assert "| Violation rate" not in text and "violation_rate" not in text
+    assert not (project.root / "logs" / "test_access.jsonl").exists()
+
+
+def test_stratified_sample_keeps_class_shares() -> None:
+    from shortcutcheck.mrs.realism_report import stratified_sample
+
+    y = pd.Series([0] * 900 + [1] * 100)
+    pick = stratified_sample(y, 100, seed=1)
+    assert len(pick) == 100 and y.iloc[pick].sum() == 10
+    assert len(stratified_sample(y.iloc[:50], 100, seed=1)) == 50

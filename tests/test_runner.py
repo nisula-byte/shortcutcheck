@@ -102,5 +102,5 @@ def test_statistics_on_a_hand_computed_example() -> None:
     empty = MRRun("MR1", np.zeros(2), np.zeros(2), np.zeros(2, bool), np.ones(2, bool))
     assert np.isnan(empty.violation_rate) and np.isnan(empty.mean_abs_delta)
     table = render_runs([run, empty], "Demo")
-    assert "| MR1 | 0 | 5 | 4 | 1 | 3 | 2 | 0.667 | 0.467 |" in table
+    assert "| MR1 | 0 | 5 | 4 | 1 | 0 | 3 | 2 | 0.667 | 0.667 | 0.467 |" in table
     assert "| – |" in table

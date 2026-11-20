@@ -19,6 +19,7 @@ from shortcutcheck.data.splits import make_rq3_split, make_rq12_split, save_spli
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.mrs import applicability as appl_mod
 from shortcutcheck.mrs import permissions as perm_mod
+from shortcutcheck.mrs import realism_report as real_mod
 from shortcutcheck.provenance import git_commit
 from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
@@ -249,6 +250,22 @@ def mrs_permissions(config: Path | None = ConfigOpt) -> None:
     cfg = _cfg(config)
     text = perm_mod.render_markdown()
     write_text(cfg.reports_dir / "permission_levels.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@mrs_app.command("realism")
+def mrs_realism(
+    split: list[str] | None = typer.Option(None, help="Frozen split(s); default: all five."),
+    max_eval: int = typer.Option(5000, help="Validation apps sampled per split."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 2.4: share of perturbed apps excluded by the realism check, per MR and split."""
+    cfg = _cfg(config)
+    commit = git_commit(cfg.root)
+    names = split or appl_mod.default_splits(cfg)
+    results = [real_mod.check_split(cfg, s, commit, max_eval=max_eval) for s in names]
+    text = real_mod.render_markdown(results, commit)
+    write_text(cfg.reports_dir / "realism.md", text, cfg.raw_root)
     typer.echo(text)
 
 
