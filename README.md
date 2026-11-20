@@ -5,7 +5,7 @@ Android malware detectors. Final-year project, Software Engineering (IIT / Unive
 Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.org/10.21227/0frv-zb46)
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
-Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR4 and the
+Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR6 and the
 runner skeleton are in place. Realism check, metrics with CIs, CLI gate and dashboard come next.
 
 ## Quick start
@@ -66,6 +66,19 @@ share of inputs whose predicted class flips. It needs no labels.
 | MR3 APK size rescale | `apk_size` | × a log-uniform factor in [0.5, 2], clipped | a size outside the training range |
 | MR4 Full metadata swap | all metadata columns | copies the metadata of a real training app from the class opposite to the model's prediction | donors with invalid years |
 
+### Secondary MRs (step 2.3)
+
+MR5 and MR6 add exactly one permission an app lacks. Which permissions they may add comes only
+from the official Android protection levels (`reports/permission_levels.md`, read from AOSP's
+framework manifest, which the `Manifest.permission` reference is generated from).
+
+| MR | Adds | To | Violation | Pool rule (fitted on training data) |
+| --- | --- | --- | --- | --- |
+| MR5 Add a benign permission | one `normal` permission (not deprecated or removed) | apps the model calls malware | any flip (to goodware) | held by 10+ training apps and more common in training goodware |
+| MR6 Add a dangerous permission | one `dangerous` permission (not removed) | every app | malware → goodware only (monotonicity) | held by 10+ training apps |
+
+Signature-level, privileged, app-op and undefined permissions are never added.
+
 ### Running an MR
 
 ```python
@@ -83,7 +96,8 @@ changed **and** whose new values are valid.
 
 | Step | Command | Writes |
 | --- | --- | --- |
-| 2.2 Which MRs apply | `shortcutcheck mrs applicability` | `reports/mr_applicability.md` |
+| 2.2–2.3 Which MRs apply | `shortcutcheck mrs applicability` | `reports/mr_applicability.md` |
+| 2.3 Permission levels | `shortcutcheck mrs permissions` | `reports/permission_levels.md` |
 
 ## Rules the code enforces
 
@@ -103,7 +117,8 @@ configs/phase1.yaml          all Phase 1 settings
 src/shortcutcheck/data/      register, audit, validity, dedup, splits, safe writes
 src/shortcutcheck/evaluation locked test loader (the only reader of test data)
 src/shortcutcheck/training/  feature selection and baselines
-src/shortcutcheck/mrs/       MR interface (base.py), MR1-MR4 (core.py), applicability
+src/shortcutcheck/mrs/       MR interface (base.py), MR1-MR4 (core.py), MR5-MR6 (secondary.py),
+                             protection levels (permissions.py), applicability
 src/shortcutcheck/runner/    run an MR against a fitted model
 src/shortcutcheck/report/    Markdown tables of MR runs
 tests/                       pytest suite, runs on synthetic Dada-like data

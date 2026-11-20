@@ -66,6 +66,11 @@ def test_mapping_table_has_a_source_link_per_feature() -> None:
             f"(https://developer.android.com/reference/android/Manifest.permission#{p.name})" in row
         )
     assert "android.googlesource.com" in text
+    # Pipes inside protection levels are escaped, so every row has exactly six cells.
+    rows = [line for line in text.splitlines() if line.startswith("| `")]
+    assert len(rows) == 34
+    assert all(line.replace("\\|", "").count("|") == 7 for line in rows)
+    assert "dangerous\\|instant" in text
 
 
 @st.composite

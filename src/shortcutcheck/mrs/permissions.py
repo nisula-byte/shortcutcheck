@@ -176,8 +176,10 @@ def render_markdown() -> str:
             )
             if n
         )
+        level = (p.level or "not defined").replace("|", "\\|")
+        early = (p.early_level or "not defined").replace("|", "\\|")
         lines.append(
-            f"| `{p.name}` | {p.level or 'not defined'} | {p.early_level or 'not defined'} "
+            f"| `{p.name}` | {level} | {early} "
             f"| {notes or '–'} | {_uses(p)} | [docs]({p.reference}) |"
         )
     n5, n6 = len(mr5_columns()), len(mr6_columns())

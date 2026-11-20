@@ -18,6 +18,10 @@ MR1–MR4 and runner skeleton (steps 2.1–2.2) with property-based tests. MR2 t
 applicable on Dada because SDK versions are missing (0) in over 99.9% of apps (D10). Apps with
 invalid years (mostly 1980) are almost all goodware in DR-AG, so MR1 never creates them, and
 violation rates will be reported separately for valid- and invalid-year inputs (D11, step 2.6).
+Step 2.3 done the same day: MR5/MR6 permission pools taken only from the official protection
+levels in AOSP's framework manifest (34 permissions: 11 normal for MR5, 14 dangerous for MR6, 9
+excluded). MR5 is not applicable on VS-AG, where malware requests every normal permission more
+often than goodware, and has only 2 permissions on AndroCT and VS-AG_deb (D12).
 
 ## Week 1 (w/c 23 Nov 2026)
 
