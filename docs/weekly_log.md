@@ -26,6 +26,10 @@ Step 2.4 (realism check): plain Gower distance turned out blind to metadata MRs 
 excluded perturbed apps were already atypical before perturbation), so metadata and behaviour
 now weigh equally (D13), decided before any violation rate was computed. Calibration ~5% on
 every split; MR4 excludes 12-27% and MR1 8-22% of perturbed apps, MR3/MR6 about 5%.
+Steps 2.5-2.6: oracle models with exactly computed expected flip rates; 83 of 83 testable known
+answers pass on the real splits. Found and fixed a reproducibility bug: parallel random-forest
+prediction changed probabilities by up to 5.6e-17, so the runner now predicts single-threaded.
+A year-only model flips 72% under MR1 on AndroCT, easing the Gate 2 worry about MR1's range.
 
 ## Week 1 (w/c 23 Nov 2026)
 
