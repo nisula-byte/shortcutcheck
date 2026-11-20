@@ -1,0 +1,18 @@
+# Pilot RQ1 (roadmap step 2.7), as stated in docs/pilot_plan.md.
+# Same settings as `shortcutcheck pilot`; used for the step 3.1 identical-rerun check because
+# it runs on the validation partition and opens no test data.
+experiment: pilot
+step: "2.7"
+engine: models
+mlflow_experiment: phase3-pilot-config
+seeds: [11, 22, 33, 44, 55]
+algorithms: [lr, svm, rf, lgbm, mlp]
+feature_sets: [full, behaviour]
+mrs: [MR1, MR2, MR3, MR4, MR5, MR6]   # inapplicable MRs are skipped (MR2 on Dada, D10)
+realism: true
+mr_sample: null                        # all validation inputs
+runs:
+  - name: DR-AG
+    train: rq12-DR-AG
+    evaluate:
+      - {split: rq12-DR-AG, partition: val, role: own}

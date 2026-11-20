@@ -1,0 +1,23 @@
+# RQ1 (roadmap step 3.3): do MRs detect shortcut reliance? Hypothesis H1 in PREREGISTRATION.md.
+# Biased sets only. Each model is evaluated on its own split's locked test partition, opened
+# once per split through load_test(). Labels are used only for the detection-quality table.
+experiment: rq1
+step: "3.3"
+engine: models
+mlflow_experiment: phase3-rq1
+seeds: [11, 22, 33, 44, 55]
+algorithms: [lr, svm, rf, lgbm, mlp]
+feature_sets: [full, behaviour]
+mrs: [MR1, MR2, MR3, MR4, MR5, MR6]
+realism: true
+mr_sample: 5000          # VS-AG test has 20,903 apps: one uniform sample, same for every model
+sample_seed: 11
+runs:
+  - name: DR-AG
+    train: rq12-DR-AG
+    evaluate:
+      - {split: rq12-DR-AG, partition: test, role: own}
+  - name: VS-AG
+    train: rq12-VS-AG
+    evaluate:
+      - {split: rq12-VS-AG, partition: test, role: own}
