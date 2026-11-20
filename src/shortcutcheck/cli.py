@@ -17,6 +17,7 @@ from shortcutcheck.data.register import register_zip, sha256_of
 from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import make_rq3_split, make_rq12_split, save_split
 from shortcutcheck.data.validity import check_dex_date, decision
+from shortcutcheck.mrs import applicability as appl_mod
 from shortcutcheck.provenance import git_commit
 from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
@@ -24,6 +25,8 @@ from shortcutcheck.training import baselines as base_mod
 app = typer.Typer(help="ShortcutCheck: metamorphic shortcut testing for malware detectors.")
 data_app = typer.Typer(help="Phase 1 data steps (roadmap 1.3-1.7).")
 app.add_typer(data_app, name="data")
+mrs_app = typer.Typer(help="Phase 2 metamorphic relation steps (roadmap 2.1-2.6).")
+app.add_typer(mrs_app, name="mrs")
 
 ConfigOpt = typer.Option(None, "--config", help="Path to configs/phase1.yaml.")
 
@@ -224,6 +227,19 @@ def baselines(
     typer.echo(text)
     if not check.passes:
         raise typer.Exit(code=1)
+
+
+@mrs_app.command("applicability")
+def mrs_applicability(
+    split: list[str] | None = typer.Option(None, help="Frozen split(s); default: all five."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 2.2: which core MRs apply to each split (training partition only)."""
+    cfg = _cfg(config)
+    rows = [appl_mod.check_split(cfg, s) for s in (split or appl_mod.default_splits(cfg))]
+    text = appl_mod.render_markdown(rows, git_commit(cfg.root))
+    write_text(cfg.reports_dir / "mr_applicability.md", text, cfg.raw_root)
+    typer.echo(text)
 
 
 @app.command("synthetic")
