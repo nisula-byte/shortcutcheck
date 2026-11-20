@@ -47,6 +47,7 @@ def _add_one(
 class _AddPermission(MetamorphicRelation):
     role = "secondary"
     eligible: tuple[str, ...] = ()
+    rule = "held by {min_apps}+ training apps"
 
     def __init__(self, columns: Sequence[str], min_apps: int = 10) -> None:
         present = tuple(c for c in self.eligible if c in set(columns))
@@ -64,7 +65,8 @@ class _AddPermission(MetamorphicRelation):
         self.pool = self._keep(x_train, y_train)
         if not self.pool:
             raise NotApplicableError(
-                f"{self.mr_id}: no eligible permission is held by {self.min_apps}+ training apps"
+                f"{self.mr_id}: no eligible permission is "
+                + self.rule.format(min_apps=self.min_apps)
             )
 
 
@@ -78,6 +80,7 @@ class AddNormalPermission(_AddPermission):
         "request, does not remove malicious code: an app judged malicious must stay malicious."
     )
     eligible = tuple(mr5_columns())
+    rule = "held by {min_apps}+ training apps and more common in training goodware than malware"
 
     def _keep(self, x_train: pd.DataFrame, y_train: pd.Series | None) -> list[str]:
         if y_train is None:
