@@ -16,8 +16,8 @@ Later in Week 0: Revision v2 approved. Steps 1.3–1.8 run on the real Dada v3.1
 (PR #1): every Gate 1 criterion met (decisions D1–D9). Phase 2 started early: MR interface,
 MR1–MR4 and runner skeleton (steps 2.1–2.2) with property-based tests. MR2 turns out not to be
 applicable on Dada because SDK versions are missing (0) in over 99.9% of apps (D10). Apps with
-invalid years (mostly 1980) are almost all goodware in DR-AG, so MR1 never creates them and
-reports them separately (D11).
+invalid years (mostly 1980) are almost all goodware in DR-AG, so MR1 never creates them, and
+violation rates will be reported separately for valid- and invalid-year inputs (D11, step 2.6).
 
 ## Week 1 (w/c 23 Nov 2026)
 
