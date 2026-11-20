@@ -12,8 +12,10 @@ reason.
   the whole validation partition (1,592 apps). The test partition is not touched.
 - **Models:** 5 algorithms (logistic regression, linear SVM, random forest, LightGBM, MLP)
   × 2 feature sets (full; behaviour-only, i.e. metadata removed) × 5 seeds (11, 22, 33, 44,
-  55) = 50 models. Library defaults, fixed in code before the run, with no tuning. The
-  linear SVM gets probabilities from sigmoid calibration (3-fold, training data only).
+  55) = 50 models. Settings are fixed in code before the run and never tuned: library
+  defaults plus balanced class weights (as in step 1.8), feature scaling for the linear
+  models and the MLP, and early stopping for the MLP. The linear SVM gets probabilities from
+  sigmoid calibration (3-fold, training data only).
 - **MRs:** every MR that applies to DR-AG: MR1, MR3 and MR4 (core; MR2 is not applicable,
   D10), MR5 and MR6 (secondary). Fitted on the training partition. Each model and MR uses
   the model's seed.
