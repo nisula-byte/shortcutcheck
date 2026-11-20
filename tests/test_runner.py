@@ -102,5 +102,27 @@ def test_statistics_on_a_hand_computed_example() -> None:
     empty = MRRun("MR1", np.zeros(2), np.zeros(2), np.zeros(2, bool), np.ones(2, bool))
     assert np.isnan(empty.violation_rate) and np.isnan(empty.mean_abs_delta)
     table = render_runs([run, empty], "Demo")
-    assert "| MR1 | 0 | 5 | 4 | 1 | 0 | 3 | 2 | 0.667 | 0.667 | 0.467 |" in table
+    assert (
+        "| MR1 | 0 | 5 | 4 | 1 | 0 | 3 | 2 | 0.667 [0.000, 1.000] | 0.667 | 0.467 [0.100, 0.800] |"
+        in table
+    )
     assert "| – |" in table
+
+
+def test_predictions_are_single_threaded_and_settings_restored() -> None:
+    from shortcutcheck.runner.engine import malware_probability
+    from shortcutcheck.training.baselines import build_model
+
+    x, y = apps(600)
+    model = build_model("rf", 0, n_estimators=50).fit(x, y)
+    assert model.get_params()["model__n_jobs"] == -1
+    first = malware_probability(model, x)
+    assert all(np.array_equal(malware_probability(model, x), first) for _ in range(3))
+    assert model.get_params()["model__n_jobs"] == -1  # restored after predicting
+
+
+def test_known_answer_not_testable_when_nothing_changes() -> None:
+    from shortcutcheck.runner.known_answers import Answer
+
+    a = Answer("s", "constant", "MR5", "exact 0", 0, float("nan"), 0.0, 0.0, float("nan"))
+    assert not a.testable and a.passes

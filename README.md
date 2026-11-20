@@ -6,8 +6,8 @@ Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.or
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
 Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR6 and the
-runner skeleton and the realism check are in place. Known-answer tests, metrics with CIs, CLI gate
-and dashboard come next.
+runner, realism check, known-answer tests and metrics with CIs are in place. The pilot (2.7), CLI
+gate and dashboard come next.
 
 ## Quick start
 
@@ -91,6 +91,19 @@ percentile of distances from a training app to its nearest *other* training app.
 it are excluded from violation counts. `MRRun` keeps the unfiltered rate too, for the with/without
 realism-filter ablation.
 
+### Known answers and metrics (steps 2.5-2.6)
+
+`shortcutcheck mrs known-answers` fits oracle models on each split and checks answers that
+are known in advance. A year stump and a size stump must flip at the rate computed from the
+MR's sampling rule (`runner/oracles.py`). A behaviour-only forest and a constant model must not
+move at all. The runner predicts single-threaded, so every probability and flip is
+reproducible (parallel tree averaging changed probabilities by up to 5.6e-17).
+
+`runner.stats.summarise(run, mask=...)` gives the violation rate and mean |change in p|, each
+with a percentile bootstrap 95% CI (2,000 seeded resamples). The rate also gets a Wilson
+interval, which is used when there are 0 violations (D14). `mask` restricts the summary to a
+subset of inputs, such as valid-year vs invalid-year apps (D11).
+
 ### Running an MR
 
 ```python
@@ -112,6 +125,7 @@ changed **and** whose new values are valid and realistic.
 | 2.2–2.3 Which MRs apply | `shortcutcheck mrs applicability` | `reports/mr_applicability.md` |
 | 2.3 Permission levels | `shortcutcheck mrs permissions` | `reports/permission_levels.md` |
 | 2.4 Realism check | `shortcutcheck mrs realism` | `reports/realism.md`, MLflow runs |
+| 2.5 Known answers | `shortcutcheck mrs known-answers` | `reports/known_answers.md`, MLflow runs |
 
 ## Rules the code enforces
 
