@@ -45,6 +45,11 @@ SVM violation counts identical; only random forests differ, because scikit-learn
 bit-identical across CPU architectures (same-machine reruns are identical). Decision D15: all
 reported numbers come from the reference platform (Linux x86-64); the Mac run is kept in
 reports/reproduction/macos-arm64/ as a cross-architecture check.
+Step 2.8: SRS and design chapter drafted (30 requirements: 22 functional, 8 non-functional; 23
+done with 61 test links, 7 planned and tied to roadmap Checks). The requirements live in
+docs/requirements.yaml and tests/test_traceability.py enforces that every one has an existing
+verifier (checked by breaking a link on purpose). Performance and usability targets (NFR7,
+NFR8) are set now, before Phase 4 measures them. Phase 2 complete.
 
 ## Week 1 (w/c 23 Nov 2026)
 

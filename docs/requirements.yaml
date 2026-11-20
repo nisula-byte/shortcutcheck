@@ -1,0 +1,280 @@
+# ShortcutCheck requirements and how each is verified (roadmap step 2.8).
+#
+# Every requirement names at least one verifier. tests/test_traceability.py fails the build if
+# a requirement has none, if a "done" requirement has no test, or if a named test, report or
+# roadmap step does not exist.
+#
+# verified_by entries:
+#   test:<file>::<function>   a pytest test in tests/
+#   report:<path>             a committed evidence file produced by a CLI command
+#   roadmap:<step>            the Check of a roadmap step that is still to come
+#   ci:<what>                 the GitHub Actions workflow
+#
+# status: done (implemented and verified) | planned (Phases 3-4; verified when its step runs)
+# priority (MoSCoW): must | should | could
+
+functional:
+  - id: FR1
+    title: Register the raw dataset by checksum, extract it read-only and refuse different data
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_data_steps.py::test_register_records_checksum
+      - test:tests/test_data_steps.py::test_raw_files_are_read_only
+      - test:tests/test_data_steps.py::test_second_machine_registration_is_safe
+      - report:DATA.md
+
+  - id: FR2
+    title: Audit every set (rows, labels, class balance, years) and check RQ3 has enough apps per class and window
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_data_steps.py::test_audit_counts_by_app_year
+      - test:tests/test_data_steps.py::test_audit_ignores_set_names_and_uses_app_year
+      - test:tests/test_data_steps.py::test_audit_fails_below_minimum
+      - test:tests/test_data_steps.py::test_dex_date_counts_and_decision
+      - report:data_audit.md
+
+  - id: FR3
+    title: Deduplicate and freeze train/validation/test splits with zero hash overlap; never overwrite a frozen split
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_dedup_splits.py::test_dedup_rules
+      - test:tests/test_dedup_splits.py::test_rq12_split_has_zero_hash_overlap
+      - test:tests/test_dedup_splits.py::test_rq3_split_holds_out_late_and_removes_overlap
+      - test:tests/test_dedup_splits.py::test_frozen_split_cannot_be_overwritten
+
+  - id: FR4
+    title: Rebuild the processed data on a new machine and verify it against the frozen index files before writing
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_baselines_cli.py::test_rebuild_reproduces_frozen_splits_and_refuses_a_mismatch
+
+  - id: FR5
+    title: Keep test data behind one logged loader that only the evaluation package may import
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_dedup_splits.py::test_training_loader_refuses_test
+      - test:tests/test_dedup_splits.py::test_load_test_logs_every_call
+      - test:tests/test_dedup_splits.py::test_only_evaluation_package_can_import_test_loader
+
+  - id: FR6
+    title: Train the five proposal algorithms on full and behaviour-only feature sets with fixed settings
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_baselines_cli.py::test_behaviour_only_drops_metadata
+      - test:tests/test_baselines_cli.py::test_dropped_features_never_reach_models
+      - test:tests/test_baselines_cli.py::test_pilot_cli_smoke
+
+  - id: FR7
+    title: Detect pipeline leakage with a shuffled-label permutation test
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_baselines_cli.py::test_permutation_check_uses_the_mean
+      - test:tests/test_baselines_cli.py::test_pr_auc_is_not_centred_when_one_class_is_spread_out
+      - test:tests/test_baselines_cli.py::test_phase1_pipeline_end_to_end
+
+  - id: FR8
+    title: Define metamorphic relations through one interface (declared columns, fit on training data, transform, validity)
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_mrs.py::test_interface_errors
+      - test:tests/test_mrs.py::test_every_core_mr_changes_only_its_declared_columns
+      - test:tests/test_runner.py::test_runner_rejects_an_mr_that_breaks_its_contract
+
+  - id: FR9
+    title: Provide the core MRs (year, SDK, size, full metadata swap) that never leave the observed training range
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_mrs.py::test_every_core_mr_stays_inside_the_observed_training_range
+      - test:tests/test_mrs.py::test_mr1_always_moves_to_a_different_valid_year
+      - test:tests/test_mrs.py::test_mr3_scales_between_half_and_double_before_clipping
+      - test:tests/test_mrs.py::test_mr4_copies_a_real_training_app_of_the_other_class
+      - test:tests/test_mrs.py::test_mr2_draws_observed_pairs_when_sdk_versions_are_known
+
+  - id: FR10
+    title: Provide secondary permission MRs whose permissions come only from official Android protection levels
+    priority: should
+    status: done
+    verified_by:
+      - test:tests/test_secondary_mrs.py::test_eligibility_follows_the_official_level_only
+      - test:tests/test_secondary_mrs.py::test_mapping_table_has_a_source_link_per_feature
+      - test:tests/test_secondary_mrs.py::test_mr5_mr6_add_exactly_one_eligible_permission
+      - report:reports/permission_levels.md
+
+  - id: FR11
+    title: Report which MRs apply to each dataset, and why not when one does not
+    priority: should
+    status: done
+    verified_by:
+      - test:tests/test_mrs.py::test_mr2_is_not_applicable_when_sdk_versions_are_missing
+      - test:tests/test_baselines_cli.py::test_mr_applicability_cli
+      - report:reports/mr_applicability.md
+
+  - id: FR12
+    title: Exclude and count perturbed apps that are not realistic (too far from every real app)
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_realism.py::test_fast_distance_matches_brute_force
+      - test:tests/test_realism.py::test_equal_block_weights_make_metadata_changes_count
+      - test:tests/test_realism.py::test_runner_excludes_unrealistic_rows_and_keeps_the_unfiltered_rate
+      - report:reports/realism.md
+
+  - id: FR13
+    title: Measure violations without labels (violation rate, mean change in probability, invariance or monotonicity)
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_runner.py::test_statistics_on_a_hand_computed_example
+      - test:tests/test_secondary_mrs.py::test_direction_on_a_hand_computed_example
+      - test:tests/test_runner.py::test_year_only_model_violates_mr1_and_behaviour_only_model_does_not
+
+  - id: FR14
+    title: Give every violation rate and mean change a 95% confidence interval, also for subgroups
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_stats.py::test_wilson_matches_published_values
+      - test:tests/test_stats.py::test_bootstrap_on_constant_and_known_data
+      - test:tests/test_stats.py::test_summarise_hand_computed
+      - test:tests/test_stats.py::test_summarise_on_a_subset
+
+  - id: FR15
+    title: Self-test the runner on oracle models whose violation rates are known in advance
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_known_answers.py::test_judge_passes_on_correct_oracles
+      - test:tests/test_known_answers.py::test_a_model_that_reads_an_undeclared_column_fails
+      - test:tests/test_known_answers.py::test_an_mr_that_breaks_its_sampling_rule_fails
+      - report:reports/known_answers.md
+
+  - id: FR16
+    title: Run the RQ1 pilot and judge Gate 2 exactly as the committed plan states
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_pilot.py::test_three_clear_algorithms_pass
+      - test:tests/test_pilot.py::test_one_bad_seed_disqualifies_an_algorithm
+      - test:tests/test_pilot.py::test_any_behaviour_violation_fails_and_is_named
+      - report:reports/pilot_rq1_rq12-DR-AG.md
+
+  - id: FR17
+    title: Compare a second machine's results with the reference run, per algorithm
+    priority: could
+    status: done
+    verified_by:
+      - test:tests/test_pilot.py::test_compare_identical_matches_and_different
+      - test:tests/test_pilot.py::test_reproduction_report_breaks_differences_down_by_algorithm
+      - report:reports/reproduction/macos-arm64/comparison.md
+
+  - id: FR18
+    title: Run RQ1-RQ3 from one config each, with hypotheses committed before 2017-19 labels are used
+    priority: must
+    status: planned
+    verified_by:
+      - roadmap:3.1
+      - roadmap:3.2
+
+  - id: FR19
+    title: Compute label-free decay signals (MR rate, SHAP metadata share, confidence drop, PSI, ATC) that cannot receive labels
+    priority: must
+    status: planned
+    verified_by:
+      - roadmap:3.6
+
+  - id: FR20
+    title: Release-gate CLI (shortcutcheck run) that exits 1 when any MR exceeds a threshold
+    priority: must
+    status: planned
+    verified_by:
+      - roadmap:4.1
+
+  - id: FR21
+    title: pytest plugin and GitHub Actions workflow that block a merge when the gate fails
+    priority: should
+    status: planned
+    verified_by:
+      - roadmap:4.2
+
+  - id: FR22
+    title: Dashboard of violation rates per MR and feature, loading results produced by the CLI
+    priority: should
+    status: planned
+    verified_by:
+      - roadmap:4.3
+
+non_functional:
+  - id: NFR1
+    title: Reproducibility - the same seeds on the same machine give identical numbers
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_mrs.py::test_same_seed_gives_the_same_perturbation
+      - test:tests/test_dedup_splits.py::test_rq12_split_is_stratified_and_reproducible
+      - test:tests/test_baselines_cli.py::test_baselines_reproducible
+      - test:tests/test_runner.py::test_predictions_are_single_threaded_and_settings_restored
+      - roadmap:3.1
+
+  - id: NFR2
+    title: Portability - runs on Linux, Windows and macOS; cross-architecture differences measured and reported
+    priority: should
+    status: done
+    verified_by:
+      - ci:ubuntu-latest and windows-latest test matrix
+      - report:reports/reproduction/macos-arm64/comparison.md
+
+  - id: NFR3
+    title: Data integrity - raw data is read-only and no command can write into it
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_data_steps.py::test_raw_files_are_read_only
+      - test:tests/test_data_steps.py::test_guard_refuses_raw_paths
+      - test:tests/test_data_steps.py::test_register_refuses_second_extraction
+
+  - id: NFR4
+    title: Traceability - every reported number names its git commit and MLflow run
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_traceability.py::test_reports_name_their_git_commit
+      - report:reports/pilot_rq1_rq12-DR-AG.csv
+
+  - id: NFR5
+    title: Maintainability - strict type checking, linting and at least 80% test coverage
+    priority: must
+    status: done
+    verified_by:
+      - ci:make check (ruff, black, mypy --strict, pytest --cov)
+      - roadmap:4.4
+
+  - id: NFR6
+    title: Requirements traceability - every requirement has a verifier that exists
+    priority: must
+    status: done
+    verified_by:
+      - test:tests/test_traceability.py::test_every_requirement_has_an_existing_verifier
+
+  - id: NFR7
+    title: Performance - core MR suite (MR1, MR3, MR4 with the realism check) for one fitted model on 10,000 apps in at most 60 s and 2 GB peak memory on the MacBook Air
+    priority: should
+    status: planned
+    verified_by:
+      - roadmap:4.5
+
+  - id: NFR8
+    title: Usability - a new user completes the quick-start unaided in at most 5 minutes; practitioners' median usefulness rating at least 4 of 5
+    priority: should
+    status: planned
+    verified_by:
+      - roadmap:4.4
+      - roadmap:4.6
