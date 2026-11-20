@@ -26,9 +26,14 @@ def numeric_features(frame: pd.DataFrame, id_column: str) -> pd.DataFrame:
 
 
 def select(
-    frame: pd.DataFrame, feature_set: FeatureSet, metadata_columns: list[str], id_column: str
+    frame: pd.DataFrame,
+    feature_set: FeatureSet,
+    metadata_columns: list[str],
+    id_column: str,
+    dropped: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     x = numeric_features(frame, id_column)
+    x = x.drop(columns=[c for c in (dropped or []) if c in x.columns])
     if feature_set == "behaviour":
         _, behaviour = split_feature_groups(list(x.columns), metadata_columns)
         x = x[behaviour]

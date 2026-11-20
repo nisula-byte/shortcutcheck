@@ -19,6 +19,7 @@ CHAR_SUFFIX = ".characteristics.csv"
 LABEL_SUFFIX = ".goodmal.csv"
 LABEL = "label"
 _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
+_LABEL_COLUMNS = ("malware", "goodmal", "label")
 _LABEL_WORDS = {"0": 0, "1": 1, "goodware": 0, "malware": 1, "benign": 0, "malicious": 1}
 
 
@@ -50,7 +51,9 @@ def read_labels(path: Path, id_column: str = "sha256") -> pd.DataFrame:
         raise ValueError(f"{path}: expected at least two columns (hash, label).")
     first = raw.iloc[0].astype(str).str.strip()
     has_header = not any(_HEX64.match(v) for v in first)
+    named: dict[str, int] = {}
     if has_header:
+        named = {name.lower(): idx for idx, name in enumerate(first)}
         raw = raw.iloc[1:].reset_index(drop=True)
     hash_col = next(
         (c for c in raw.columns if raw[c].astype(str).str.strip().str.match(_HEX64).all()),
@@ -58,7 +61,14 @@ def read_labels(path: Path, id_column: str = "sha256") -> pd.DataFrame:
     )
     if hash_col is None:
         raise ValueError(f"{path}: no column of 64-character hex hashes found.")
-    label_col = next(c for c in raw.columns if c != hash_col)
+    # Dada v3.1 label files are "sha256,malware,dataset"; pick the label column by name when
+    # there is a header, otherwise fall back to the first non-hash column.
+    by_name = next((named[n] for n in _LABEL_COLUMNS if n in named), None)
+    label_col = (
+        raw.columns[by_name]
+        if by_name is not None
+        else next(c for c in raw.columns if c != hash_col)
+    )
     values = raw[label_col].astype(str).str.strip().str.lower()
     unknown = sorted(set(values) - set(_LABEL_WORDS))
     if unknown:

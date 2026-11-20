@@ -26,13 +26,15 @@ Each command writes its evidence file; commit those files. All settings live in
 | Step | Command | Writes | Check |
 | --- | --- | --- | --- |
 | 1.3 Get the data | `shortcutcheck data register path/to/dada-dataset-v3.1.zip` | `DATA.md`, read-only `data/raw/dada-v3.1/` | SHA-256 recorded; raw files read-only; every other writer refuses `data/raw` |
-| 1.4 Data audit | `shortcutcheck data audit` | `data_audit.md` | Exits non-zero if no RQ3 candidate has ≥1,000 apps per class in 2014 **and** 2017 |
+| 1.4 Data audit | `shortcutcheck data audit` | `data_audit.md` | Exits non-zero if no RQ3 candidate has ≥1,000 apps per class in both its early and late year windows (counted by each app's own `year`) |
 | 1.5 Feature validity | `shortcutcheck data validity` | `reports/dex_date_validity.md` | KEEP or DROP `dex_date` (threshold 20%) |
-| 1.6 + 1.7 Dedup and frozen splits | `shortcutcheck data split-rq12 --name <n> --sets <glob>` and `shortcutcheck data split-rq3 --name <n> --early <glob> --late <glob>` | `data/splits/<n>/` (commit), `reports/<n>_dedup.md` | Tests assert zero hash overlap and that training code cannot import the test loader |
+| 1.6 + 1.7 Dedup and frozen splits | `shortcutcheck data split-rq12 --name <n> --sets <glob>` and `shortcutcheck data split-rq3 --candidate <rq3 candidate>` | `data/splits/<n>/` (commit), `reports/<n>_dedup.md` | Tests assert zero hash overlap and that training code cannot import the test loader |
 | 1.8 Baselines | `shortcutcheck baselines --split <n>` | `reports/<n>_baselines.{md,csv}`, MLflow runs in `mlflow.db` | Exits non-zero unless shuffled-label models score at chance |
 
-Before step 1.4, update `rq3_candidates` in the config to the real Dada set names (the first
-audit prints them all). To rehearse everything on synthetic data first: `make dry-run`.
+RQ3 candidates in `configs/phase1.yaml` are named year windows over a family's pooled apps
+(e.g. `ACT-G` + `ACT-M`). Dada's `ACT14`/`ACT17` names are time barriers, not app years, so
+they are not used to define windows. To rehearse everything on synthetic data first:
+`make dry-run`.
 
 ## Rules the code enforces
 

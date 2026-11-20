@@ -36,9 +36,21 @@ def test_permutation_check_uses_the_mean() -> None:
     # Every permutation well above chance: the signature of leakage.
     leak = ShuffledCheck((0.80, 0.82, 0.79, 0.81, 0.83, 0.80), (0.3,) * 6, 0.3, 0.05)
     assert not leak.passes
-    # PR-AUC must also sit at the prevalence.
-    pr_leak = ShuffledCheck((0.5,) * 6, (0.6, 0.61, 0.59, 0.6, 0.62, 0.6), 0.3, 0.05)
-    assert not pr_leak.passes
+    # PR-AUC above prevalence with ROC-AUC at chance is reported but not judged (D7).
+    pr_only = ShuffledCheck((0.5,) * 6, (0.6, 0.61, 0.59, 0.6, 0.62, 0.6), 0.3, 0.05)
+    assert pr_only.passes and not pr_only.pr_within_margin
+
+
+def test_pr_auc_is_not_centred_when_one_class_is_spread_out() -> None:
+    """Why D7 exists: label-free scores, malware at both extremes, PR-AUC above prevalence."""
+    from sklearn.metrics import average_precision_score, roc_auc_score
+
+    rng = np.random.default_rng(0)
+    y = np.repeat([0, 1], 5000)
+    # Scores never depend on the label, only on how spread out each class is.
+    scores = np.where(y == 1, rng.normal(0.5, 0.3, y.size), rng.normal(0.5, 0.05, y.size))
+    assert abs(roc_auc_score(y, scores) - 0.5) < 0.02
+    assert average_precision_score(y, scores) > 0.55
 
 
 def test_behaviour_only_drops_metadata(project: Config) -> None:
@@ -49,6 +61,29 @@ def test_behaviour_only_drops_metadata(project: Config) -> None:
     assert list(x.columns) == ["flag_00"]
     x_full, _ = select(frame, "full", project.metadata_columns, project.id_column)
     assert {"year", "apk_size", "flag_00"} <= set(x_full.columns)
+
+
+def test_dropped_features_never_reach_models(project: Config) -> None:
+    frame = pd.DataFrame(
+        {
+            "sha256": ["a" * 64],
+            "year": [2014],
+            "dex_date": ["2014-01-02"],
+            "flag_00": [1],
+            "label": [1],
+        }
+    )
+    assert "dex_date" in project.dropped_features
+    assert {"APK size", "Year"} <= set(project.dropped_features)
+    for feature_set in ("full", "behaviour"):
+        x, _ = select(
+            frame,
+            feature_set,
+            project.metadata_columns,
+            project.id_column,
+            project.dropped_features,
+        )
+        assert "dex_date" not in x.columns
 
 
 def _tree_digest(folder: Path) -> str:
@@ -74,7 +109,7 @@ def test_phase1_pipeline_end_to_end(project: Config) -> None:
     assert result.exit_code == 0, result.output
     result = runner.invoke(
         app,
-        ["data", "split-rq3", "--name", "rq3-syn", "--early", "SYN_ACT14", "--late", "SYN_ACT17"],
+        ["data", "split-rq3", "--candidate", "SYN-2014-vs-2017", "--name", "rq3-syn"],
     )
     assert result.exit_code == 0, result.output
 

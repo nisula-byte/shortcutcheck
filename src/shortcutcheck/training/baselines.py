@@ -102,10 +102,20 @@ class ShuffledCheck:
 
     @property
     def passes(self) -> bool:
-        return (
-            abs(self.roc_mean - 0.5) < self.roc_margin
-            and abs(self.pr_mean - self.prevalence) < self.pr_margin
-        )
+        """Judged on ROC-AUC only (decision D7).
+
+        Swapping the class labels turns a model's ROC-AUC into 1 - ROC-AUC, so under the
+        no-leak null its mean over permutations is 0.5. PR-AUC has no such symmetry: when one
+        class sits in sparse regions of feature space, a shuffled-label model gives it extreme
+        scores at *both* ends, which lifts that class's PR-AUC above its prevalence without any
+        label information. PR-AUC is still reported, with the original criterion, but not judged.
+        """
+        return abs(self.roc_mean - 0.5) < self.roc_margin
+
+    @property
+    def pr_within_margin(self) -> bool:
+        """The original (pre-D7) PR-AUC criterion, reported for transparency (rule 3)."""
+        return abs(self.pr_mean - self.prevalence) < self.pr_margin
 
 
 def _setup_mlflow(cfg: Config, experiment: str) -> None:
@@ -126,8 +136,12 @@ def run_baselines(
     rows = []
     for algorithm in ALGORITHMS:
         for feature_set in FEATURE_SETS:
-            train_x, train_y = select(train, feature_set, cfg.metadata_columns, cfg.id_column)
-            val_x, val_y = select(val, feature_set, cfg.metadata_columns, cfg.id_column)
+            train_x, train_y = select(
+                train, feature_set, cfg.metadata_columns, cfg.id_column, cfg.dropped_features
+            )
+            val_x, val_y = select(
+                val, feature_set, cfg.metadata_columns, cfg.id_column, cfg.dropped_features
+            )
             val_x = _align(train_x, val_x)
             for seed in cfg.seeds:
                 model = build_model(algorithm, seed).fit(train_x, train_y)
@@ -166,8 +180,10 @@ def shuffled_label_checks(
     split_name: str,
     git_commit: str = "unknown",
 ) -> ShuffledCheck:
-    train_x, train_y = select(train, "full", cfg.metadata_columns, cfg.id_column)
-    val_x, val_y = select(val, "full", cfg.metadata_columns, cfg.id_column)
+    train_x, train_y = select(
+        train, "full", cfg.metadata_columns, cfg.id_column, cfg.dropped_features
+    )
+    val_x, val_y = select(val, "full", cfg.metadata_columns, cfg.id_column, cfg.dropped_features)
     val_x = _align(train_x, val_x)
     rocs, prs = [], []
     with mlflow.start_run(run_name="shuffled-label-permutation-test"):
@@ -232,15 +248,20 @@ def render_markdown(
         "## Shuffled-label check (permutation test)",
         "",
         f"{len(c.roc_aucs)} random forests trained on shuffled training labels, scored on "
-        "validation. The mean must sit within the margin of chance; margin = max(configured "
-        "floor, 3 × standard error of the mean over permutations).",
+        "validation. The check is judged on mean ROC-AUC, which must sit within the margin of "
+        "0.5; margin = max(configured floor, 3 × standard error of the mean over "
+        "permutations). PR-AUC is reported against the original criterion but not judged "
+        "(decision D7: it is not centred on the prevalence when one class is more spread out "
+        "in feature space).",
         "",
-        "| Measure | Mean | Chance | Margin | Range over permutations |",
-        "| --- | --- | --- | --- | --- |",
+        "| Measure | Mean | Chance | Margin | Range over permutations | Within margin | Judged |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
         f"| ROC-AUC | {c.roc_mean:.3f} | 0.500 | {c.roc_margin:.3f} "
-        f"| {min(c.roc_aucs):.3f}–{max(c.roc_aucs):.3f} |",
+        f"| {min(c.roc_aucs):.3f}–{max(c.roc_aucs):.3f} "
+        f"| {'yes' if c.passes else 'no'} | yes |",
         f"| PR-AUC | {c.pr_mean:.3f} | {c.prevalence:.3f} | {c.pr_margin:.3f} "
-        f"| {min(c.pr_aucs):.3f}–{max(c.pr_aucs):.3f} |",
+        f"| {min(c.pr_aucs):.3f}–{max(c.pr_aucs):.3f} "
+        f"| {'yes' if c.pr_within_margin else 'no'} | no |",
         "",
         f"**Check: {'PASS' if c.passes else 'FAIL'}.** "
         + (

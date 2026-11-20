@@ -4,24 +4,39 @@ import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 
 from shortcutcheck.config import Config, load_config
 from shortcutcheck.data.register import register_zip
+from shortcutcheck.synthetic import SYNTHETIC_CANDIDATES as SYN_BASE
 from shortcutcheck.synthetic import make_synthetic_dada
 
 REPO = Path(__file__).resolve().parents[1]
 
 
+SYNTHETIC_CANDIDATES = {
+    **SYN_BASE,
+    "SYN-missing": {
+        "goodware": "NOPE-G",
+        "malware": "NOPE-M",
+        "early_years": [2014],
+        "late_years": [2017],
+    },
+}
+
+
 def make_project(tmp: Path, **overrides: object) -> Path:
-    """A throwaway project root with the real config file (optionally overridden)."""
+    """A throwaway project root with the real config file, plus overrides.
+
+    The RQ3 candidates are replaced by ones that match the synthetic data.
+    """
     root = tmp / "project"
     (root / "configs").mkdir(parents=True)
     (root / "pyproject.toml").write_text("[project]\nname='tmp'\n")
-    text = (REPO / "configs" / "phase1.yaml").read_text()
-    for key, value in overrides.items():
-        lines = [ln for ln in text.splitlines() if not ln.startswith(f"{key}:")]
-        text = "\n".join(lines) + f"\n{key}: {value}\n"
-    (root / "configs" / "phase1.yaml").write_text(text)
+    config = yaml.safe_load((REPO / "configs" / "phase1.yaml").read_text())
+    config["rq3_candidates"] = SYNTHETIC_CANDIDATES
+    config.update(overrides)
+    (root / "configs" / "phase1.yaml").write_text(yaml.safe_dump(config))
     return root
 
 

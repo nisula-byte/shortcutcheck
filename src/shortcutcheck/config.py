@@ -35,8 +35,11 @@ class Config:
     dex_date_invalid_threshold: float
     metadata_columns: list[str]
     id_column: str
+    dropped_features: list[str]
+    rq3_primary: str
+    rq12_splits: dict[str, list[str]]
     rq3_min_per_class_per_year: int
-    rq3_candidates: dict[str, dict[str, str]]
+    rq3_candidates: dict[str, dict[str, Any]]
     split_seed: int
     rq12_ratios: list[float]
     rq3_val_fraction: float
@@ -74,6 +77,9 @@ _KNOWN = {
     "dex_date_invalid_threshold",
     "metadata_columns",
     "id_column",
+    "dropped_features",
+    "rq3_primary",
+    "rq12_splits",
     "rq3_min_per_class_per_year",
     "rq3_candidates",
     "split_seed",
@@ -103,6 +109,9 @@ def load_config(path: Path | None = None, root: Path | None = None) -> Config:
         dex_date_invalid_threshold=float(raw["dex_date_invalid_threshold"]),
         metadata_columns=[str(c) for c in raw["metadata_columns"]],
         id_column=str(raw["id_column"]),
+        dropped_features=[str(c) for c in raw.get("dropped_features", [])],
+        rq3_primary=str(raw.get("rq3_primary", "")),
+        rq12_splits={str(k): [str(x) for x in v] for k, v in raw.get("rq12_splits", {}).items()},
         rq3_min_per_class_per_year=int(raw["rq3_min_per_class_per_year"]),
         rq3_candidates={str(k): dict(v) for k, v in raw["rq3_candidates"].items()},
         split_seed=int(raw["split_seed"]),

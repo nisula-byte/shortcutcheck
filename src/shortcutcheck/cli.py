@@ -18,7 +18,7 @@ from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import make_rq3_split, make_rq12_split, save_split
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.provenance import git_commit
-from shortcutcheck.synthetic import make_synthetic_dada
+from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
 
 app = typer.Typer(help="ShortcutCheck: metamorphic shortcut testing for malware detectors.")
@@ -55,11 +55,16 @@ def audit(config: Path | None = ConfigOpt) -> None:
     """Step 1.4: write data_audit.md with per-set counts and the RQ3 sufficiency check."""
     cfg = _cfg(config)
     sets = _sets(cfg)
-    summaries, verdicts = audit_mod.run_audit(
-        sets, cfg.id_column, cfg.rq3_candidates, cfg.rq3_min_per_class_per_year
+    summaries, verdicts, tables = audit_mod.run_audit(
+        sets,
+        cfg.id_column,
+        cfg.rq3_candidates,
+        cfg.rq3_min_per_class_per_year,
+        cfg.android_first_year,
+        cfg.collection_year,
     )
     text = audit_mod.render_markdown(
-        summaries, verdicts, cfg.raw_dir.relative_to(cfg.root).as_posix()
+        summaries, verdicts, cfg.raw_dir.relative_to(cfg.root).as_posix(), tables
     )
     write_text(cfg.root / "data_audit.md", text, cfg.raw_root)
     typer.echo(text)
@@ -122,12 +127,17 @@ def _write_dedup(cfg: Config, name: str, report: DedupReport) -> None:
 
 @data_app.command("split-rq12")
 def split_rq12(
-    name: str = typer.Option(..., help="Split name, e.g. rq12-drebin-biased."),
-    sets: list[str] = typer.Option(..., "--sets", help="Glob(s) of Dada set names."),
+    name: str = typer.Option(..., help="Split name, e.g. rq12-DR-AG."),
+    sets: list[str] | None = typer.Option(
+        None, "--sets", help="Dada set names or globs (default: rq12_splits[name] in config)."
+    ),
     config: Path | None = ConfigOpt,
 ) -> None:
     """Step 1.7: stratified 70/15/15 split, frozen."""
     cfg = _cfg(config)
+    sets = sets or cfg.rq12_splits.get(name)
+    if not sets:
+        raise typer.BadParameter(f"No --sets given and '{name}' is not in rq12_splits.")
     clean, sources, report = _combined(cfg, sets)
     split = make_rq12_split(clean, cfg.split_seed, cfg.rq12_ratios)
     paths = save_split(
@@ -148,39 +158,55 @@ def split_rq12(
 
 @data_app.command("split-rq3")
 def split_rq3(
-    name: str = typer.Option(..., help="Split name, e.g. rq3-androct."),
-    early: list[str] = typer.Option(..., "--early", help="Glob(s) for the 2014 sets."),
-    late: list[str] = typer.Option(..., "--late", help="Glob(s) for the 2017 sets."),
+    candidate: str | None = typer.Option(
+        None, help="An rq3_candidates entry (default: rq3_primary in config)."
+    ),
+    name: str | None = typer.Option(None, help="Split name (default: rq3-<candidate>)."),
     config: Path | None = ConfigOpt,
 ) -> None:
-    """Step 1.7: 2014 -> train/val, 2017 held out entirely, frozen."""
+    """Step 1.7: early-window apps -> train/val, late-window apps held out entirely, frozen."""
     cfg = _cfg(config)
-    early_df, early_src, early_rep = _combined(cfg, early)
-    late_df, late_src, late_rep = _combined(cfg, late)
+    candidate = candidate or cfg.rq3_primary
+    if candidate not in cfg.rq3_candidates:
+        raise typer.BadParameter(f"Unknown candidate '{candidate}'.")
+    cand = cfg.rq3_candidates[candidate]
+    raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
+    clean, report = deduplicate(raw_pool, cfg.id_column)
+    first, last = cfg.android_first_year, cfg.collection_year
+    early_years = [int(y) for y in cand["early_years"]]
+    late_years = [int(y) for y in cand["late_years"]]
+    early = audit_mod.window(clean, early_years, first, last)
+    late = audit_mod.window(clean, late_years, first, last)
     split, overlap = make_rq3_split(
-        early_df, late_df, cfg.split_seed, cfg.rq3_val_fraction, cfg.id_column
+        early, late, cfg.split_seed, cfg.rq3_val_fraction, cfg.id_column
     )
+    split_name = name or f"rq3-{candidate}"
     paths = save_split(
         cfg,
-        name,
+        split_name,
         split,
         {
             "kind": "rq3",
+            "candidate": candidate,
             "seed": cfg.split_seed,
             "val_fraction": cfg.rq3_val_fraction,
-            "early_sources": early_src,
-            "late_sources": late_src,
+            "early_years": early_years,
+            "late_years": late_years,
+            "sources": {n: sha256_of(s.features_path) for n, s in _named(cfg, sources)},
             "late_removed_for_hash_overlap": overlap,
-            "dedup_early": asdict(early_rep),
-            "dedup_late": asdict(late_rep),
+            "dedup": asdict(report),
         },
     )
-    _write_dedup(cfg, f"{name}-early", early_rep)
-    _write_dedup(cfg, f"{name}-late", late_rep)
+    _write_dedup(cfg, split_name, report)
     typer.echo(
-        f"Frozen split '{name}' -> {paths.index_dir} ({overlap} late apps removed for hash "
-        "overlap). Commit the index files."
+        f"Frozen split '{split_name}' -> {paths.index_dir} ({overlap} late apps removed for "
+        "hash overlap). Commit the index files."
     )
+
+
+def _named(cfg: Config, names: list[str]) -> list[tuple[str, DadaSet]]:
+    by_name = {s.name: s for s in _sets(cfg)}
+    return [(n, by_name[n]) for n in names]
 
 
 @app.command("baselines")
@@ -205,9 +231,16 @@ def synthetic(
     out_dir: Path,
     seed: int = 0,
     scale: float = typer.Option(1.0, help="Multiply set sizes (use <1 for quick tests)."),
+    config_out: Path | None = typer.Option(
+        None, help="Also write a copy of the config whose RQ3 candidates match this data."
+    ),
+    config: Path | None = ConfigOpt,
 ) -> None:
     """Write a synthetic Dada-like zip for a dry run. Never report results from it."""
     typer.echo(f"Wrote {make_synthetic_dada(out_dir, seed, scale)}")
+    if config_out is not None:
+        base = config or load_config().root / "configs" / "phase1.yaml"
+        typer.echo(f"Wrote {write_synthetic_config(base, config_out)}")
 
 
 if __name__ == "__main__":
