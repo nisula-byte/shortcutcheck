@@ -6,7 +6,8 @@ Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.or
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
 Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR6 and the
-runner skeleton are in place. Realism check, metrics with CIs, CLI gate and dashboard come next.
+runner skeleton and the realism check are in place. Known-answer tests, metrics with CIs, CLI gate
+and dashboard come next.
 
 ## Quick start
 
@@ -79,25 +80,38 @@ framework manifest, which the `Manifest.permission` reference is generated from)
 
 Signature-level, privileged, app-op and undefined permissions are never added.
 
+### Realism check (step 2.4)
+
+A perturbed app counts only if it still looks like a real app. `RealismCheck` measures a
+weighted Gower distance from each perturbed app to its nearest real training app: 0/1 flags are
+compared by mismatch, and numeric features by their training percentile. Metadata and behaviour
+each carry half the weight (D13), so an app is realistic only if some real app has both
+similar behaviour and similar metadata. The threshold is the 95th
+percentile of distances from a training app to its nearest *other* training app. Apps beyond
+it are excluded from violation counts. `MRRun` keeps the unfiltered rate too, for the with/without
+realism-filter ablation.
+
 ### Running an MR
 
 ```python
-from shortcutcheck.mrs import YearShift
+from shortcutcheck.mrs import RealismCheck, YearShift
 from shortcutcheck.runner import run_mr
 
 mr = YearShift("year", valid=(2008, 2021)).fit(x_train)
-run = run_mr(model, mr, x_val, seed=11)     # no labels needed
+realism = RealismCheck(seed=11, metadata_columns=["year", "apk_size"]).fit(x_train)
+run = run_mr(model, mr, x_val, seed=11, realism=realism)     # no labels needed
 run.violation_rate, run.mean_abs_delta, run.n_counted
 ```
 
 The runner gives the model only its own training columns (`feature_names_in_`), so a
 behaviour-only model cannot react to a metadata MR. Statistics count only rows the MR actually
-changed **and** whose new values are valid.
+changed **and** whose new values are valid and realistic.
 
 | Step | Command | Writes |
 | --- | --- | --- |
 | 2.2–2.3 Which MRs apply | `shortcutcheck mrs applicability` | `reports/mr_applicability.md` |
 | 2.3 Permission levels | `shortcutcheck mrs permissions` | `reports/permission_levels.md` |
+| 2.4 Realism check | `shortcutcheck mrs realism` | `reports/realism.md`, MLflow runs |
 
 ## Rules the code enforces
 

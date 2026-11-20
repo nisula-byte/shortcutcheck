@@ -9,6 +9,7 @@ from shortcutcheck.mrs.base import (
     changed_rows,
 )
 from shortcutcheck.mrs.core import MetadataSwap, SdkShift, SizeScale, YearShift, core_mrs
+from shortcutcheck.mrs.realism import RealismCheck
 from shortcutcheck.mrs.secondary import AddDangerousPermission, AddNormalPermission, secondary_mrs
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "NotApplicableError",
     "NotFittedError",
     "ObservedRange",
+    "RealismCheck",
     "SdkShift",
     "SizeScale",
     "YearShift",

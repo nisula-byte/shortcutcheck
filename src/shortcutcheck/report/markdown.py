@@ -16,17 +16,18 @@ def render_runs(runs: Iterable[MRRun], title: str) -> str:
     lines = [
         f"# {title}",
         "",
-        "Counted = inputs the MR changed and whose new values are valid. "
+        "Counted = inputs the MR changed whose new values are valid and realistic. "
         "Violation rate = share of counted inputs whose predicted class flipped.",
         "",
-        "| MR | Seed | Inputs | Perturbed | Invalid | Counted | Violations | Violation rate "
-        "| Mean abs. change in p |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| MR | Seed | Inputs | Perturbed | Invalid | Unrealistic | Counted | Violations "
+        "| Violation rate | Without realism filter | Mean abs. change in p |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for run in runs:
         lines.append(
             f"| {run.mr_id} | {run.seed} | {run.n_inputs} | {int(run.perturbed.sum())} "
-            f"| {int((run.perturbed & ~run.valid).sum())} | {run.n_counted} "
-            f"| {run.n_violations} | {_fmt(run.violation_rate)} | {_fmt(run.mean_abs_delta)} |"
+            f"| {int((run.perturbed & ~run.valid).sum())} | {run.n_unrealistic} "
+            f"| {run.n_counted} | {run.n_violations} | {_fmt(run.violation_rate)} "
+            f"| {_fmt(run.violation_rate_unfiltered)} | {_fmt(run.mean_abs_delta)} |"
         )
     return "\n".join(lines) + "\n"
