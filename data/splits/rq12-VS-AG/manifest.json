@@ -1,0 +1,41 @@
+{
+  "name": "rq12-VS-AG",
+  "created_utc": "2026-11-20T14:41:15+00:00",
+  "counts": {
+    "train": {
+      "rows": 97545,
+      "goodware": 50480,
+      "malware": 47065
+    },
+    "val": {
+      "rows": 20903,
+      "goodware": 10817,
+      "malware": 10086
+    },
+    "test": {
+      "rows": 20903,
+      "goodware": 10817,
+      "malware": 10086
+    }
+  },
+  "kind": "rq12",
+  "seed": 11,
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "sources": {
+    "VS-AG-test": "b92bb2d0bb94bc0ba37442ae892487fe16d84233ee33e9083fcf57472191319d",
+    "VS-AG-training": "e1bdc13c3c0595b57837dece15251fbc16727d1c80813752c1dc1f2d33a345c7"
+  },
+  "dedup": {
+    "rows_in": 139369,
+    "unlabelled_dropped": 0,
+    "duplicate_rows_dropped": 18,
+    "conflicting_hashes_dropped": 0,
+    "rows_out": 139351,
+    "conflicting_feature_groups": 0,
+    "rows_in_conflicting_feature_groups": 0
+  }
+}

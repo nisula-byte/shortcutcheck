@@ -1,0 +1,41 @@
+{
+  "name": "rq12-DR-AG_deb",
+  "created_utc": "2026-11-20T14:41:08+00:00",
+  "counts": {
+    "train": {
+      "rows": 1157,
+      "goodware": 590,
+      "malware": 567
+    },
+    "val": {
+      "rows": 248,
+      "goodware": 126,
+      "malware": 122
+    },
+    "test": {
+      "rows": 249,
+      "goodware": 127,
+      "malware": 122
+    }
+  },
+  "kind": "rq12",
+  "seed": 11,
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "sources": {
+    "DR-AG_deb-test": "19f5ee38c219c8d5440dc1c9b2865b98f8a62deec645219b45935c39c9641ecd",
+    "DR-AG_deb-training": "d25f660fe03b5ef6c91c840062d70710cde862af8c0bc20d3ed8ad597722a0e2"
+  },
+  "dedup": {
+    "rows_in": 1654,
+    "unlabelled_dropped": 0,
+    "duplicate_rows_dropped": 0,
+    "conflicting_hashes_dropped": 0,
+    "rows_out": 1654,
+    "conflicting_feature_groups": 0,
+    "rows_in_conflicting_feature_groups": 0
+  }
+}
