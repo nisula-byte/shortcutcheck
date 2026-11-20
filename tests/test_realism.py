@@ -40,7 +40,7 @@ def frames(draw: st.DrawFn, n_min: int = 3) -> pd.DataFrame:
     data["size"] = draw(st.lists(st.integers(2, 10**8), min_size=n, max_size=n))
     data["year"] = draw(st.lists(st.integers(2008, 2021), min_size=n, max_size=n))
     df = pd.DataFrame(data)
-    df.loc[0, "f0"], df.loc[1, "f0"] = 0, 1  # keep f* recognisably binary
+    df.loc[0, "f0"], df.loc[1, "f0"] = 0, 1  # at least one varying column
     return df
 
 
@@ -48,8 +48,9 @@ def frames(draw: st.DrawFn, n_min: int = 3) -> pd.DataFrame:
 @given(train=frames(), query=frames(n_min=2))
 def test_fast_distance_matches_brute_force(train: pd.DataFrame, query: pd.DataFrame) -> None:
     check = RealismCheck(chunk=3).fit(train)
-    binary = [f"f{i}" for i in range(5) if set(train[f"f{i}"]) <= {0, 1}]
-    numeric = [c for c in train.columns if c not in binary]
+    varying = [c for c in train.columns if train[c].nunique() > 1]
+    binary = [c for c in varying if set(train[c]) <= {0, 1}]
+    numeric = [c for c in varying if c not in binary]
     assert check.space.binary == binary and check.space.numeric == numeric
     expected = brute_gower(query, train, binary, numeric)
     np.testing.assert_allclose(check.distances(query), expected, atol=1e-6)
@@ -76,16 +77,41 @@ def test_threshold_uses_distance_to_another_training_app() -> None:
     assert check.is_realistic(far).all()  # it is itself a training app
 
 
+def prototypes(n: int = 400, seed: int = 0) -> pd.DataFrame:
+    """Real apps come in two kinds: flags 0-9 on, or flags 10-19 on, plus one noisy flag."""
+    rng = np.random.default_rng(seed)
+    base = np.zeros((n, 20), dtype=int)
+    kind = rng.integers(0, 2, n)
+    base[kind == 0, :10] = 1
+    base[kind == 1, 10:] = 1
+    noise = rng.integers(0, 20, n)
+    base[np.arange(n), noise] ^= 1
+    return pd.DataFrame(base, columns=[f"f{i}" for i in range(20)])
+
+
 def test_far_away_perturbation_is_unrealistic() -> None:
-    rng = np.random.default_rng(0)
-    base = rng.integers(0, 2, size=(400, 20))
-    base[:, :10] = 0  # the first ten flags are always off in real apps
-    train = pd.DataFrame(base, columns=[f"f{i}" for i in range(20)])
+    train = prototypes()
     check = RealismCheck(seed=1).fit(train)
     weird = train.iloc[:5].copy()
-    weird.iloc[:, :10] = 1
+    weird.iloc[:, :] = 1  # both kinds at once: no real app looks like this
     assert not check.is_realistic(weird).any()
-    assert check.is_realistic(train.iloc[:50]).mean() > 0.9
+    assert check.is_realistic(prototypes(seed=2)).mean() > 0.9
+
+
+def test_equal_block_weights_make_metadata_changes_count() -> None:
+    flags = prototypes(600)
+    kind = (flags.iloc[:, 10:].sum(axis=1) >= 9).astype(int)
+    train = flags.assign(year=np.where(kind == 1, 2018, 2012))  # each kind has its own era
+    moved = train.copy()
+    moved["year"] = np.where(train["year"] == 2012, 2018, 2012)  # break the link
+    plain = RealismCheck(seed=0).fit(train)
+    blocks = RealismCheck(seed=0, metadata_columns=["year"]).fit(train)
+    # Plain Gower: one column out of 21 barely moves the distance (0.5 / 21 at most).
+    assert (plain.distances(moved) - plain.distances(train)).max() <= 0.5 / 21 + 1e-9
+    # Equal blocks: the year now weighs as much as all behaviour flags together.
+    assert blocks.is_realistic(moved).mean() < 0.5
+    assert blocks.space.w_numeric.sum() == pytest.approx(0.5)
+    assert blocks.space.w_binary.sum() == pytest.approx(0.5)
 
 
 def test_missing_values_do_not_break_distances() -> None:
@@ -99,6 +125,10 @@ def test_errors() -> None:
         RealismCheck().distances(pd.DataFrame({"a": [1]}))
     with pytest.raises(ValueError, match="percentile"):
         RealismCheck(percentile=100)
+    with pytest.raises(ValueError, match="metadata_weight"):
+        RealismCheck(metadata_weight=1.0)
+    with pytest.raises(ValueError, match="no varying"):
+        RealismCheck().fit(pd.DataFrame({"a": [1, 1]}))
     check = RealismCheck(reference_sample=2).fit(pd.DataFrame({"a": [0, 1], "b": [1, 0]}))
     with pytest.raises(ValueError, match="columns missing"):
         check.distances(pd.DataFrame({"a": [1]}))
@@ -125,15 +155,14 @@ class Sum:
 
 
 def test_runner_excludes_unrealistic_rows_and_keeps_the_unfiltered_rate() -> None:
-    rng = np.random.default_rng(0)
-    base = rng.integers(0, 2, size=(300, 20))
-    base[:, :10] = 0
-    x = pd.DataFrame(base, columns=[f"f{i}" for i in range(20)])
+    x = prototypes(300)
+    x = x[x.iloc[:, 10:].sum(axis=1) >= 9].reset_index(drop=True)  # second kind only
+    train = prototypes(400, seed=5)
     cols = tuple(f"f{i}" for i in range(10))
-    mr = FlagFlip(cols).fit(pd.concat([x, x.assign(**{c: 1 for c in cols}).iloc[:1]]))
-    realism = RealismCheck(seed=0).fit(x)
+    mr = FlagFlip(cols).fit(train)  # turns on all of flags 0-9: both kinds at once
+    realism = RealismCheck(seed=0).fit(train)
     run = run_mr(Sum(), mr, x, seed=0, realism=realism)
-    assert run.n_unrealistic == 300 and run.n_counted == 0
+    assert run.n_unrealistic == len(x) and run.n_counted == 0
     assert np.isnan(run.violation_rate)
     assert run.violation_rate_unfiltered > 0.5
     plain = run_mr(Sum(), mr, x, seed=0)

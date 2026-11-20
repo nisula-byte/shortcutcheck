@@ -82,9 +82,11 @@ Signature-level, privileged, app-op and undefined permissions are never added.
 
 ### Realism check (step 2.4)
 
-A perturbed app counts only if it still looks like a real app. `RealismCheck` measures the
-Gower distance from each perturbed app to its nearest real training app: 0/1 flags are compared
-by mismatch, and numeric features by their training percentile. The threshold is the 95th
+A perturbed app counts only if it still looks like a real app. `RealismCheck` measures a
+weighted Gower distance from each perturbed app to its nearest real training app: 0/1 flags are
+compared by mismatch, and numeric features by their training percentile. Metadata and behaviour
+each carry half the weight (D13), so an app is realistic only if some real app has both
+similar behaviour and similar metadata. The threshold is the 95th
 percentile of distances from a training app to its nearest *other* training app. Apps beyond
 it are excluded from violation counts. `MRRun` keeps the unfiltered rate too, for the with/without
 realism-filter ablation.
@@ -96,7 +98,7 @@ from shortcutcheck.mrs import RealismCheck, YearShift
 from shortcutcheck.runner import run_mr
 
 mr = YearShift("year", valid=(2008, 2021)).fit(x_train)
-realism = RealismCheck(seed=11).fit(x_train)
+realism = RealismCheck(seed=11, metadata_columns=["year", "apk_size"]).fit(x_train)
 run = run_mr(model, mr, x_val, seed=11, realism=realism)     # no labels needed
 run.violation_rate, run.mean_abs_delta, run.n_counted
 ```
