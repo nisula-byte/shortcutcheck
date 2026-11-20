@@ -189,3 +189,17 @@ def test_known_answers_cli(project: Config) -> None:
     assert result.exit_code == 0, text
     assert "**Check: PASS**" in text and "| year stump | MR1 | expected |" in text
     assert not (project.root / "logs" / "test_access.jsonl").exists()
+
+
+def test_pilot_cli_smoke(project: Config) -> None:
+    """Step 2.7: one command produces the report, CSVs and the Gate 2 verdict."""
+    runner.invoke(app, ["data", "split-rq12", "--name", "rq12-syn", "--sets", "SYN-DR-AG"])
+    result = runner.invoke(app, ["pilot", "--split", "rq12-syn"])
+    text = (project.reports_dir / "pilot_rq1_rq12-syn.md").read_text()
+    assert "## Gate 2" in text and "Behaviour-only models exactly 0" in text
+    assert "**yes**" in text.split("| 2.")[1].split("\n")[0]  # behaviour-only exactly 0
+    rows = pd.read_csv(project.reports_dir / "pilot_rq1_rq12-syn.csv")
+    assert set(rows["algorithm"]) == {"lr", "svm", "rf", "lgbm", "mlp"}
+    assert rows["seed"].nunique() == 5 and set(rows["stratum"]) >= {"all", "valid year"}
+    assert result.exit_code in (0, 1)
+    assert not (project.root / "logs" / "test_access.jsonl").exists()

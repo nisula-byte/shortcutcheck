@@ -15,23 +15,48 @@ from typing import Literal
 import mlflow
 import numpy as np
 import pandas as pd
+from lightgbm import LGBMClassifier
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
 
 from shortcutcheck.config import Config
 from shortcutcheck.data.splits import load_part
 from shortcutcheck.metrics import detection_metrics
 from shortcutcheck.training.features import FeatureSet, select
 
-Algorithm = Literal["rf", "lr"]
-ALGORITHMS: tuple[Algorithm, ...] = ("rf", "lr")
+Algorithm = Literal["rf", "lr", "svm", "lgbm", "mlp"]
+ALGORITHMS: tuple[Algorithm, ...] = ("rf", "lr")  # step 1.8 baselines
+# The proposal's five algorithms (pilot, RQ1-RQ3).
+ALL_ALGORITHMS: tuple[Algorithm, ...] = ("lr", "svm", "rf", "lgbm", "mlp")
 FEATURE_SETS: tuple[FeatureSet, ...] = ("full", "behaviour")
 
 
 def build_model(algorithm: Algorithm, seed: int, n_estimators: int = 300) -> Pipeline:
+    """Fixed, untuned settings: defaults plus class balancing (and scaling where needed)."""
+    impute = ("impute", SimpleImputer(strategy="median", keep_empty_features=True))
+    if algorithm == "svm":
+        svm = LinearSVC(class_weight="balanced", random_state=seed, max_iter=5000)
+        calibrated = CalibratedClassifierCV(svm, method="sigmoid", cv=3)
+        return Pipeline([impute, ("scale", StandardScaler()), ("model", calibrated)])
+    if algorithm == "lgbm":
+        lgbm = LGBMClassifier(
+            n_estimators=n_estimators,
+            class_weight="balanced",
+            random_state=seed,
+            deterministic=True,
+            force_row_wise=True,
+            verbose=-1,
+        )
+        return Pipeline([impute, ("model", lgbm)])
+    if algorithm == "mlp":
+        mlp = MLPClassifier(early_stopping=True, max_iter=300, random_state=seed)
+        return Pipeline([impute, ("scale", StandardScaler()), ("model", mlp)])
     if algorithm == "rf":
         return Pipeline(
             [
