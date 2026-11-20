@@ -24,6 +24,9 @@ import numpy as np
 import pandas as pd
 
 Role = Literal["core", "secondary"]
+# "any": any change of predicted class is a violation (invariance).
+# "to_goodware": only malware -> goodware is a violation (monotonicity, MR6).
+Violation = Literal["any", "to_goodware"]
 
 
 class NotFittedError(RuntimeError):
@@ -63,6 +66,7 @@ class MetamorphicRelation(ABC):
     name: str
     justification: str
     role: Role = "core"
+    violation: Violation = "any"
 
     def __init__(self, columns_touched: tuple[str, ...]) -> None:
         if not columns_touched:
@@ -122,6 +126,7 @@ class MetamorphicRelation(ABC):
             "id": self.mr_id,
             "name": self.name,
             "role": self.role,
+            "violation": self.violation,
             "columns": ", ".join(self.columns_touched),
             "justification": self.justification,
         }

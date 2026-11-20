@@ -1,4 +1,4 @@
-"""Metamorphic relations. See ``base`` for the interface and ``core`` for MR1-MR4."""
+"""Metamorphic relations: ``base`` (interface), ``core`` (MR1-MR4), ``secondary`` (MR5-MR6)."""
 
 from shortcutcheck.mrs.base import (
     MetamorphicRelation,
@@ -9,8 +9,11 @@ from shortcutcheck.mrs.base import (
     changed_rows,
 )
 from shortcutcheck.mrs.core import MetadataSwap, SdkShift, SizeScale, YearShift, core_mrs
+from shortcutcheck.mrs.secondary import AddDangerousPermission, AddNormalPermission, secondary_mrs
 
 __all__ = [
+    "AddDangerousPermission",
+    "AddNormalPermission",
     "MetadataSwap",
     "MetamorphicRelation",
     "NotApplicableError",
@@ -22,4 +25,5 @@ __all__ = [
     "changed_columns",
     "changed_rows",
     "core_mrs",
+    "secondary_mrs",
 ]

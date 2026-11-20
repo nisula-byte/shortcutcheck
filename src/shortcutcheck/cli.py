@@ -18,6 +18,7 @@ from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import make_rq3_split, make_rq12_split, save_split
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.mrs import applicability as appl_mod
+from shortcutcheck.mrs import permissions as perm_mod
 from shortcutcheck.provenance import git_commit
 from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
@@ -234,11 +235,20 @@ def mrs_applicability(
     split: list[str] | None = typer.Option(None, help="Frozen split(s); default: all five."),
     config: Path | None = ConfigOpt,
 ) -> None:
-    """Step 2.2: which core MRs apply to each split (training partition only)."""
+    """Steps 2.2-2.3: which MRs apply to each split (training partition only)."""
     cfg = _cfg(config)
     rows = [appl_mod.check_split(cfg, s) for s in (split or appl_mod.default_splits(cfg))]
     text = appl_mod.render_markdown(rows, git_commit(cfg.root))
     write_text(cfg.reports_dir / "mr_applicability.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@mrs_app.command("permissions")
+def mrs_permissions(config: Path | None = ConfigOpt) -> None:
+    """Step 2.3: the official protection level of every permission feature, and its MR."""
+    cfg = _cfg(config)
+    text = perm_mod.render_markdown()
+    write_text(cfg.reports_dir / "permission_levels.md", text, cfg.raw_root)
     typer.echo(text)
 
 
