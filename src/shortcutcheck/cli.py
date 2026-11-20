@@ -127,12 +127,17 @@ def _write_dedup(cfg: Config, name: str, report: DedupReport) -> None:
 
 @data_app.command("split-rq12")
 def split_rq12(
-    name: str = typer.Option(..., help="Split name, e.g. rq12-drebin-biased."),
-    sets: list[str] = typer.Option(..., "--sets", help="Glob(s) of Dada set names."),
+    name: str = typer.Option(..., help="Split name, e.g. rq12-DR-AG."),
+    sets: list[str] | None = typer.Option(
+        None, "--sets", help="Dada set names or globs (default: rq12_splits[name] in config)."
+    ),
     config: Path | None = ConfigOpt,
 ) -> None:
     """Step 1.7: stratified 70/15/15 split, frozen."""
     cfg = _cfg(config)
+    sets = sets or cfg.rq12_splits.get(name)
+    if not sets:
+        raise typer.BadParameter(f"No --sets given and '{name}' is not in rq12_splits.")
     clean, sources, report = _combined(cfg, sets)
     split = make_rq12_split(clean, cfg.split_seed, cfg.rq12_ratios)
     paths = save_split(
@@ -153,12 +158,15 @@ def split_rq12(
 
 @data_app.command("split-rq3")
 def split_rq3(
-    candidate: str = typer.Option(..., help="An rq3_candidates entry from the config."),
+    candidate: str | None = typer.Option(
+        None, help="An rq3_candidates entry (default: rq3_primary in config)."
+    ),
     name: str | None = typer.Option(None, help="Split name (default: rq3-<candidate>)."),
     config: Path | None = ConfigOpt,
 ) -> None:
     """Step 1.7: early-window apps -> train/val, late-window apps held out entirely, frozen."""
     cfg = _cfg(config)
+    candidate = candidate or cfg.rq3_primary
     if candidate not in cfg.rq3_candidates:
         raise typer.BadParameter(f"Unknown candidate '{candidate}'.")
     cand = cfg.rq3_candidates[candidate]

@@ -19,6 +19,26 @@ metadata_columns:
   - targetSdkVersion
 id_column: sha256
 
+# Features removed from every model (step 1.5; decision log D3, D4).
+# dex_date: 32.8% invalid across Dada and 35-59% in the RQ1/RQ2 sets (> 20% rule), and `year`
+# already holds its year. The other 12 are columns Dada derived for debiasing: binned copies of
+# apk_size/year and true/false summaries of other flags (Dada's features_specs.json). Keeping
+# exact copies would let a model read metadata that an MR forgot to change.
+dropped_features:
+  - dex_date
+  - "APK size"
+  - "Year"
+  - "Internet Permission"
+  - "External storage"
+  - "Uses Play Services"
+  - "Generates UUIDs"
+  - "Vibrate phone"
+  - "NFC"
+  - "Bluetooth"
+  - "Uses HTTP"
+  - "Uses JSON"
+  - "Specify User-Agent"
+
 # RQ3 data-sufficiency rule (step 1.4). Dada's ACT14/ACT17 and AZL14/AZL17 names are time
 # barriers that cut ONE app pool into training/test parts (ACT14 and ACT17 share ~27k hashes),
 # so RQ3 pools a family's apps and selects them by each app's own `year` (= year of dex_date).
@@ -51,6 +71,18 @@ rq3_candidates:
     malware: AZL-M
     early_years: [2013, 2014]
     late_years: [2017, 2018]
+
+# RQ3 design (decision log D1): the candidate used for the frozen RQ3 split.
+rq3_primary: AndroCT-2012-14-vs-2017-19
+
+# RQ1/RQ2 datasets (decision log D5). Dada's training and test parts are pooled, deduplicated and
+# re-split 70/15/15. Names are exact Dada set names (no globs: "DR-AG-*" would also match the
+# DR-AG-C2_deb sets).
+rq12_splits:
+  rq12-DR-AG: [DR-AG-training]
+  rq12-DR-AG_deb: [DR-AG_deb-training, DR-AG_deb-test]
+  rq12-VS-AG: [VS-AG-training, VS-AG-test]
+  rq12-VS-AG_deb: [VS-AG_deb-training, VS-AG_deb-test]
 
 # Frozen splits (step 1.7)
 split_seed: 11
