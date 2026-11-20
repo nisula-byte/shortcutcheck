@@ -30,6 +30,13 @@ Steps 2.5-2.6: oracle models with exactly computed expected flip rates; 83 of 83
 answers pass on the real splits. Found and fixed a reproducibility bug: parallel random-forest
 prediction changed probabilities by up to 5.6e-17, so the runner now predicts single-threaded.
 A year-only model flips 72% under MR1 on AndroCT, easing the Gate 2 worry about MR1's range.
+Step 2.7 pilot RQ1 on DR-AG (plan and Gate 2 criteria committed first, docs/pilot_plan.md):
+Gate 2 pilot criteria PASS. Behaviour-only models exactly 0 on MR1-MR4; all 5 algorithms
+clearly non-zero on a core MR (MR4 for all; MR1 for RF and LightGBM). LightGBM full: F1 0.984
+(same as behaviour-only) but MR1 flips 28% and MR4 31%. Contrary to my D11 expectation, the
+year effect comes from valid years (LightGBM 38%), not 1980-dated apps (about 0%). MR5/MR6 also
+move behaviour-only models (permissions are behaviour), so they measure permission weighting,
+not metadata shortcuts. MR3 about 0 everywhere.
 
 ## Week 1 (w/c 23 Nov 2026)
 
