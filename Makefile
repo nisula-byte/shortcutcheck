@@ -1,4 +1,4 @@
-.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability
+.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot
 
 setup:
 	python -m pip install -r requirements-dev.txt
@@ -46,3 +46,7 @@ baselines-vs-ag:
 # Phase 2, step 2.2: which core MRs apply to each frozen split (training partitions only).
 mr-applicability:
 	shortcutcheck mrs applicability
+
+# Phase 2, step 2.7: pilot RQ1 on the Drebin mixed set (plan: docs/pilot_plan.md).
+pilot:
+	shortcutcheck pilot --split rq12-DR-AG

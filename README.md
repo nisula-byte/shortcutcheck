@@ -6,8 +6,8 @@ Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.or
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
 Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR6 and the
-runner, realism check, known-answer tests and metrics with CIs are in place. The pilot (2.7), CLI
-gate and dashboard come next.
+runner, realism check, known-answer tests, metrics with CIs and the RQ1 pilot are in place (Gate 2
+pilot criteria pass). The CLI gate and dashboard come in Phase 4.
 
 ## Quick start
 
@@ -126,6 +126,7 @@ changed **and** whose new values are valid and realistic.
 | 2.3 Permission levels | `shortcutcheck mrs permissions` | `reports/permission_levels.md` |
 | 2.4 Realism check | `shortcutcheck mrs realism` | `reports/realism.md`, MLflow runs |
 | 2.5 Known answers | `shortcutcheck mrs known-answers` | `reports/known_answers.md`, MLflow runs |
+| 2.7 Pilot RQ1 | `make pilot` (plan: `docs/pilot_plan.md`) | `reports/pilot_rq1_rq12-DR-AG.{md,csv}`, MLflow runs |
 
 ## Rules the code enforces
 

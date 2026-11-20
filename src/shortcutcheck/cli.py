@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 import typer
 
+from shortcutcheck import pilot as pilot_mod
 from shortcutcheck.config import Config, load_config
 from shortcutcheck.data import audit as audit_mod
 from shortcutcheck.data.dada import DadaSet, discover_sets, match_sets, read_set
@@ -288,6 +289,24 @@ def mrs_known_answers(
     write_text(cfg.reports_dir / "known_answers.md", text, cfg.raw_root)
     typer.echo(text)
     if not all(a.passes for a in answers if a.testable):
+        raise typer.Exit(code=1)
+
+
+@app.command("pilot")
+def pilot(
+    split: str = typer.Option("rq12-DR-AG", help="Frozen split (plan: the Drebin mixed set)."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 2.7: pilot RQ1 as stated in docs/pilot_plan.md; exits non-zero if Gate 2 fails."""
+    cfg = _cfg(config)
+    result = pilot_mod.run_pilot(cfg, split, git_commit(cfg.root))
+    out = cfg.reports_dir
+    write_frame(result.rows, out / f"pilot_rq1_{split}.csv", cfg.raw_root)
+    write_frame(result.detection, out / f"pilot_rq1_{split}_detection.csv", cfg.raw_root)
+    text = pilot_mod.render_markdown(result)
+    write_text(cfg.reports_dir / f"pilot_rq1_{split}.md", text, cfg.raw_root)
+    typer.echo(text)
+    if not pilot_mod.gate2(result).passes:
         raise typer.Exit(code=1)
 
 
