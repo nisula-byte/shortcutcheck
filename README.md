@@ -20,6 +20,10 @@ pre-commit install
 pytest                              # roadmap 1.2 Check: green on a second machine or Colab
 ```
 
+**Reproducing on another machine** (including the Gate 2 check): see
+[`docs/reproduce.md`](docs/reproduce.md). In short: `make check`, register the Dada zip,
+`make rebuild`, `make pilot`, `make pilot-compare`.
+
 ## Phase 1, step by step
 
 Each command writes its evidence file; commit those files. All settings live in

@@ -143,3 +143,20 @@ def test_dex_date_counts_and_decision() -> None:
     assert report.invalid_share == pytest.approx(0.3)
     assert decision(report, 0.20).startswith("DROP")
     assert decision(report, 0.50).startswith("KEEP")
+
+
+def test_second_machine_registration_is_safe(
+    project: Config, synthetic_zip: Path, tmp_path: Path
+) -> None:
+    """Registering the same zip again adds no DATA.md row; a different zip is refused."""
+    from shortcutcheck.data.register import recorded_digests, register_zip
+
+    data_md = project.root / "DATA.md"
+    before = data_md.read_text()
+    assert len(recorded_digests(data_md)) == 1
+    register_zip(synthetic_zip, tmp_path / "elsewhere", data_md)  # same zip, new machine
+    assert data_md.read_text() == before
+    other = tmp_path / "other.zip"
+    other.write_bytes(synthetic_zip.read_bytes() + b"\0")
+    with pytest.raises(ValueError, match="not the data"):
+        register_zip(other, tmp_path / "elsewhere2", data_md)

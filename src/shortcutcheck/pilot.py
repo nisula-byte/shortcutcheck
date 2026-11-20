@@ -251,3 +251,62 @@ def render_markdown(result: PilotResult) -> str:
             f"| {a} | {mr} | {st} | {grp['n_counted'].mean():.0f} | {_f(grp['rate'].mean())} |"
         )
     return "\n".join(lines) + "\n"
+
+
+# ---- reproduction check (Gate 2, second machine) -----------------------------------------
+
+COUNT_COLUMNS = ("n_counted", "n_violations", "n_unrealistic")
+RATE_COLUMNS = ("rate", "rate_low", "rate_unfiltered", "delta")  # rate_low decides Gate 2
+KEYS = ("algorithm", "feature_set", "seed", "mr", "stratum")
+RATE_TOLERANCE = 0.01
+
+
+@dataclass(frozen=True)
+class Comparison:
+    n_rows: int
+    identical_rows: int
+    max_rate_diff: float
+    worst: list[str]
+    same_gate: bool
+
+    @property
+    def verdict(self) -> str:
+        if self.identical_rows == self.n_rows and self.same_gate:
+            return "IDENTICAL"
+        if self.max_rate_diff <= RATE_TOLERANCE and self.same_gate:
+            return "MATCHES"
+        return "DIFFERENT"
+
+
+def compare(reference: pd.DataFrame, rerun: pd.DataFrame) -> Comparison:
+    """Compare a re-run pilot CSV with the committed one (MLflow run IDs are ignored).
+
+    IDENTICAL: every count and rate equal. MATCHES: every rate within 0.01 and the same Gate 2
+    verdict; small differences can come from a different maths library (e.g. Apple Accelerate
+    vs OpenBLAS) in the linear models and the MLP. DIFFERENT: anything else.
+    """
+    cols = list(KEYS) + list(COUNT_COLUMNS) + list(RATE_COLUMNS)
+    ref = reference[cols].set_index(list(KEYS)).sort_index()
+    new = rerun[cols].set_index(list(KEYS)).sort_index()
+    if not ref.index.equals(new.index):
+        raise ValueError("the two pilot results do not cover the same models, MRs and strata")
+    rate_diff = (ref[list(RATE_COLUMNS)] - new[list(RATE_COLUMNS)]).abs().fillna(0.0)
+    same_counts = (ref[list(COUNT_COLUMNS)] == new[list(COUNT_COLUMNS)]).all(axis=1)
+    same_rows = same_counts & (rate_diff.max(axis=1) < 1e-12)
+    per_row = rate_diff.max(axis=1).sort_values(ascending=False)
+    worst = [
+        f"{'/'.join(str(part) for part in k) if isinstance(k, tuple) else k}: {v:.4f}"
+        for k, v in per_row.head(5).items()
+        if v > 0
+    ]
+
+    def passes(df: pd.DataFrame) -> bool:
+        return gate2(PilotResult("", "", df, pd.DataFrame())).passes
+
+    return Comparison(
+        n_rows=len(ref),
+        identical_rows=int(same_rows.sum()),
+        max_rate_diff=float(rate_diff.to_numpy().max()) if len(rate_diff) else 0.0,
+        worst=worst,
+        same_gate=passes(reference) == passes(rerun),
+    )

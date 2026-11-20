@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import io
+import json
+import subprocess
 from dataclasses import asdict
 from pathlib import Path
 
@@ -16,7 +19,13 @@ from shortcutcheck.data.dada import DadaSet, discover_sets, match_sets, read_set
 from shortcutcheck.data.dedup import DedupReport, deduplicate
 from shortcutcheck.data.register import register_zip, sha256_of
 from shortcutcheck.data.safe_io import write_frame, write_text
-from shortcutcheck.data.splits import make_rq3_split, make_rq12_split, save_split
+from shortcutcheck.data.splits import (
+    make_rq3_split,
+    make_rq12_split,
+    save_split,
+    verify_against_index,
+    write_processed,
+)
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.mrs import applicability as appl_mod
 from shortcutcheck.mrs import permissions as perm_mod
@@ -126,6 +135,75 @@ def _combined(cfg: Config, patterns: list[str]) -> tuple[pd.DataFrame, dict[str,
     return clean, sources, report
 
 
+def _build_rq12(
+    cfg: Config, sets: list[str]
+) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
+    """The RQ1/RQ2 split, computed deterministically (step 1.7). Used by split and rebuild."""
+    clean, sources, report = _combined(cfg, sets)
+    split = make_rq12_split(clean, cfg.split_seed, cfg.rq12_ratios)
+    extra: dict[str, object] = {
+        "kind": "rq12",
+        "seed": cfg.split_seed,
+        "ratios": cfg.rq12_ratios,
+        "sources": sources,
+        "dedup": asdict(report),
+    }
+    return split, extra, report
+
+
+def _build_rq3(cfg: Config, candidate: str) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
+    """The RQ3 split, computed deterministically (step 1.7). Used by split and rebuild."""
+    cand = cfg.rq3_candidates[candidate]
+    raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
+    clean, report = deduplicate(raw_pool, cfg.id_column)
+    first, last = cfg.android_first_year, cfg.collection_year
+    early_years = [int(y) for y in cand["early_years"]]
+    late_years = [int(y) for y in cand["late_years"]]
+    early = audit_mod.window(clean, early_years, first, last)
+    late = audit_mod.window(clean, late_years, first, last)
+    split, overlap = make_rq3_split(
+        early, late, cfg.split_seed, cfg.rq3_val_fraction, cfg.id_column
+    )
+    extra: dict[str, object] = {
+        "kind": "rq3",
+        "candidate": candidate,
+        "seed": cfg.split_seed,
+        "val_fraction": cfg.rq3_val_fraction,
+        "early_years": early_years,
+        "late_years": late_years,
+        "sources": {n: sha256_of(s.features_path) for n, s in _named(cfg, sources)},
+        "late_removed_for_hash_overlap": overlap,
+        "dedup": asdict(report),
+    }
+    return split, extra, report
+
+
+@data_app.command("rebuild")
+def rebuild(config: Path | None = ConfigOpt) -> None:
+    """Rebuild data/processed on a new machine from the raw data and the frozen splits.
+
+    Each split is recomputed with the same code and seed, then checked against its committed
+    index files and manifest (sources, apps, class counts). Only if everything matches are the
+    processed files written. Frozen index files are never changed.
+    """
+    cfg = _cfg(config)
+    manifests = sorted(cfg.splits_dir.glob("*/manifest.json"))
+    if not manifests:
+        raise typer.BadParameter(f"No frozen splits under {cfg.splits_dir}.")
+    for path in manifests:
+        name = path.parent.name
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        if manifest["kind"] == "rq12":
+            # The configured order matters: sets are concatenated before the seeded shuffle.
+            sets = cfg.rq12_splits.get(name) or list(manifest["sources"])
+            split, extra, _ = _build_rq12(cfg, sets)
+        else:
+            split, extra, _ = _build_rq3(cfg, manifest["candidate"])
+        verify_against_index(cfg, name, split, extra["sources"])  # type: ignore[arg-type]
+        write_processed(cfg, name, split)
+        typer.echo(f"Rebuilt '{name}': matches its frozen index files and manifest.")
+
+
 def _write_dedup(cfg: Config, name: str, report: DedupReport) -> None:
     lines = [f"# Deduplication: `{name}` (roadmap step 1.6)", "", "| Measure | Count |"]
     lines += ["| --- | ---: |"] + [f"| {k} | {v} |" for k, v in asdict(report).items()]
@@ -145,20 +223,8 @@ def split_rq12(
     sets = sets or cfg.rq12_splits.get(name)
     if not sets:
         raise typer.BadParameter(f"No --sets given and '{name}' is not in rq12_splits.")
-    clean, sources, report = _combined(cfg, sets)
-    split = make_rq12_split(clean, cfg.split_seed, cfg.rq12_ratios)
-    paths = save_split(
-        cfg,
-        name,
-        split,
-        {
-            "kind": "rq12",
-            "seed": cfg.split_seed,
-            "ratios": cfg.rq12_ratios,
-            "sources": sources,
-            "dedup": asdict(report),
-        },
-    )
+    split, extra, report = _build_rq12(cfg, sets)
+    paths = save_split(cfg, name, split, extra)
     _write_dedup(cfg, name, report)
     typer.echo(f"Frozen split '{name}' -> {paths.index_dir}. Commit the index files.")
 
@@ -176,37 +242,13 @@ def split_rq3(
     candidate = candidate or cfg.rq3_primary
     if candidate not in cfg.rq3_candidates:
         raise typer.BadParameter(f"Unknown candidate '{candidate}'.")
-    cand = cfg.rq3_candidates[candidate]
-    raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
-    clean, report = deduplicate(raw_pool, cfg.id_column)
-    first, last = cfg.android_first_year, cfg.collection_year
-    early_years = [int(y) for y in cand["early_years"]]
-    late_years = [int(y) for y in cand["late_years"]]
-    early = audit_mod.window(clean, early_years, first, last)
-    late = audit_mod.window(clean, late_years, first, last)
-    split, overlap = make_rq3_split(
-        early, late, cfg.split_seed, cfg.rq3_val_fraction, cfg.id_column
-    )
+    split, extra, report = _build_rq3(cfg, candidate)
     split_name = name or f"rq3-{candidate}"
-    paths = save_split(
-        cfg,
-        split_name,
-        split,
-        {
-            "kind": "rq3",
-            "candidate": candidate,
-            "seed": cfg.split_seed,
-            "val_fraction": cfg.rq3_val_fraction,
-            "early_years": early_years,
-            "late_years": late_years,
-            "sources": {n: sha256_of(s.features_path) for n, s in _named(cfg, sources)},
-            "late_removed_for_hash_overlap": overlap,
-            "dedup": asdict(report),
-        },
-    )
+    paths = save_split(cfg, split_name, split, extra)
     _write_dedup(cfg, split_name, report)
     typer.echo(
-        f"Frozen split '{split_name}' -> {paths.index_dir} ({overlap} late apps removed for "
+        f"Frozen split '{split_name}' -> {paths.index_dir} "
+        f"({extra['late_removed_for_hash_overlap']} late apps removed for "
         "hash overlap). Commit the index files."
     )
 
@@ -307,6 +349,29 @@ def pilot(
     write_text(cfg.reports_dir / f"pilot_rq1_{split}.md", text, cfg.raw_root)
     typer.echo(text)
     if not pilot_mod.gate2(result).passes:
+        raise typer.Exit(code=1)
+
+
+@app.command("pilot-compare")
+def pilot_compare(
+    split: str = typer.Option("rq12-DR-AG", help="Frozen split the pilot ran on."),
+    ref: str = typer.Option("HEAD", help="Git revision holding the reference results."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Gate 2 reproduction: compare a fresh `make pilot` with the committed results."""
+    cfg = _cfg(config)
+    rel = f"reports/pilot_rq1_{split}.csv"
+    committed = subprocess.run(
+        ["git", "show", f"{ref}:{rel}"], cwd=cfg.root, capture_output=True, text=True, check=True
+    ).stdout
+    result = pilot_mod.compare(pd.read_csv(io.StringIO(committed)), pd.read_csv(cfg.root / rel))
+    typer.echo(f"Rows compared: {result.n_rows}; identical: {result.identical_rows}")
+    typer.echo(f"Largest difference in any rate: {result.max_rate_diff:.4f}")
+    typer.echo(f"Same Gate 2 verdict: {'yes' if result.same_gate else 'NO'}")
+    for line in result.worst:
+        typer.echo(f"  {line}")
+    typer.echo(f"Verdict: {result.verdict}")
+    if result.verdict == "DIFFERENT":
         raise typer.Exit(code=1)
 
 

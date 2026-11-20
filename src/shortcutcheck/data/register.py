@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import stat
 import zipfile
 from datetime import UTC, datetime
@@ -52,6 +53,13 @@ def _relative(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def recorded_digests(data_md: Path) -> set[str]:
+    """SHA-256 values already recorded in DATA.md (empty if the file does not exist)."""
+    if not data_md.exists():
+        return set()
+    return set(re.findall(r"`([0-9a-f]{64})`", data_md.read_text(encoding="utf-8")))
+
+
 def register_zip(zip_path: Path, extract_to: Path, data_md: Path) -> str:
     """Hash, extract once, lock, and log. Returns the SHA-256.
 
@@ -64,6 +72,12 @@ def register_zip(zip_path: Path, extract_to: Path, data_md: Path) -> str:
             "to replace it, delete the folder by hand and record why in DATA.md."
         )
     digest = sha256_of(zip_path)
+    recorded = recorded_digests(data_md)
+    if recorded and digest not in recorded:
+        raise ValueError(
+            f"{zip_path.name} has SHA-256 {digest}, but DATA.md records {sorted(recorded)}. "
+            "This is not the data the frozen splits were built from."
+        )
     extract_to.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path) as archive:
         for member in archive.namelist():
@@ -72,6 +86,8 @@ def register_zip(zip_path: Path, extract_to: Path, data_md: Path) -> str:
                 raise ValueError(f"Unsafe path in zip: {member}")
         archive.extractall(extract_to)
     make_read_only(extract_to)
+    if digest in recorded:
+        return digest  # a second machine registering the same zip: nothing new to record
     if not data_md.exists():
         data_md.write_text(DATA_MD_HEADER, encoding="utf-8")
     stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 
 import pandas as pd
+import pytest
 
 from shortcutcheck.pilot import PilotResult, gate2
 
@@ -77,3 +78,30 @@ def test_secondary_mrs_do_not_count() -> None:
     df["mr"] = "MR6"
     df["rate_low"] = 0.5
     assert not gate2(result(df)).biased_non_zero
+
+
+def compare_rows(rate: float = 0.1, n_violations: int = 10) -> pd.DataFrame:
+    df = rows({a: 0.05 for a in ALGOS})
+    return df.assign(
+        n_counted=100,
+        n_unrealistic=0,
+        rate=rate,
+        rate_unfiltered=rate,
+        delta=rate,
+        n_violations=df["n_violations"].where(df["feature_set"] == "behaviour", n_violations),
+    )
+
+
+def test_compare_identical_matches_and_different() -> None:
+    from shortcutcheck.pilot import compare
+
+    ref = compare_rows()
+    assert compare(ref, ref.copy()).verdict == "IDENTICAL"
+    near = compare_rows(rate=0.105, n_violations=11)  # e.g. another maths library
+    c = compare(ref, near)
+    assert c.verdict == "MATCHES" and c.max_rate_diff == pytest.approx(0.005)
+    far = compare_rows(rate=0.2)
+    assert compare(ref, far).verdict == "DIFFERENT"
+    flipped_gate = ref.copy()
+    flipped_gate["rate_low"] = 0.0  # no algorithm clearly non-zero any more
+    assert compare(ref, flipped_gate).verdict == "DIFFERENT"

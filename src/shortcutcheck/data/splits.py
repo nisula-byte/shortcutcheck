@@ -119,9 +119,40 @@ def save_split(
         **manifest_extra,
     }
     write_text(paths.index_dir / "manifest.json", json.dumps(manifest, indent=2), cfg.raw_root)
+    return write_processed(cfg, name, split)
+
+
+def write_processed(cfg: Config, name: str, split: pd.DataFrame) -> SplitPaths:
+    """(Re)write the processed feature files of a split. Index files are not touched."""
+    paths = split_paths(cfg, name)
     write_frame(split[split[PART].isin(TRAINING_PARTS)], paths.trainval, cfg.raw_root)
     write_frame(split[split[PART] == "test"].drop(columns=[PART]), paths.test, cfg.raw_root)
     return paths
+
+
+def verify_against_index(
+    cfg: Config, name: str, split: pd.DataFrame, sources: dict[str, str]
+) -> None:
+    """Raise unless ``split`` reproduces the frozen split exactly (sources, apps, counts)."""
+    paths = split_paths(cfg, name)
+    manifest = json.loads((paths.index_dir / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("sources") != sources:
+        raise ValueError(
+            f"Split '{name}': source files differ from the manifest "
+            f"(expected {manifest.get('sources')}, found {sources})."
+        )
+    for part in ("train", "val", "test"):
+        rows = split[split[PART] == part]
+        if set(rows[cfg.id_column]) != read_index(cfg, name, part):
+            raise ValueError(f"Split '{name}/{part}': apps differ from the frozen index file.")
+        expected = manifest["counts"][part]
+        found = {
+            "rows": len(rows),
+            "goodware": int((rows[LABEL] == 0).sum()),
+            "malware": int((rows[LABEL] == 1).sum()),
+        }
+        if found != expected:
+            raise ValueError(f"Split '{name}/{part}': counts {found} != manifest {expected}.")
 
 
 def read_index(cfg: Config, name: str, part: str) -> set[str]:

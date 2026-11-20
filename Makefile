@@ -1,4 +1,4 @@
-.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot
+.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot pilot-compare rebuild
 
 setup:
 	python -m pip install -r requirements-dev.txt
@@ -50,3 +50,11 @@ mr-applicability:
 # Phase 2, step 2.7: pilot RQ1 on the Drebin mixed set (plan: docs/pilot_plan.md).
 pilot:
 	shortcutcheck pilot --split rq12-DR-AG
+
+# Gate 2 reproduction on a second machine: compare a fresh `make pilot` with the committed results.
+pilot-compare:
+	shortcutcheck pilot-compare --split rq12-DR-AG
+
+# New machine: rebuild data/processed from the raw zip and the frozen split index files.
+rebuild:
+	shortcutcheck data rebuild
