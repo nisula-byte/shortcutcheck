@@ -22,6 +22,10 @@ Step 2.3 done the same day: MR5/MR6 permission pools taken only from the officia
 levels in AOSP's framework manifest (34 permissions: 11 normal for MR5, 14 dangerous for MR6, 9
 excluded). MR5 is not applicable on VS-AG, where malware requests every normal permission more
 often than goodware, and has only 2 permissions on AndroCT and VS-AG_deb (D12).
+Step 2.4 (realism check): plain Gower distance turned out blind to metadata MRs (91-100% of
+excluded perturbed apps were already atypical before perturbation), so metadata and behaviour
+now weigh equally (D13), decided before any violation rate was computed. Calibration ~5% on
+every split; MR4 excludes 12-27% and MR1 8-22% of perturbed apps, MR3/MR6 about 5%.
 
 ## Week 1 (w/c 23 Nov 2026)
 
