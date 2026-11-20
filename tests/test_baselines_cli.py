@@ -139,3 +139,13 @@ def test_baselines_reproducible(project: Config) -> None:
     second = pd.read_csv(project.reports_dir / "r_baselines.csv")
     cols = ["f1", "pr_auc", "roc_auc", "fpr_at_95tpr"]
     np.testing.assert_allclose(first[cols].to_numpy(), second[cols].to_numpy())
+
+
+def test_mr_applicability_cli(project: Config) -> None:
+    """Step 2.2: the applicability report reads only the training partition of a split."""
+    runner.invoke(app, ["data", "split-rq12", "--name", "rq12-syn", "--sets", "SYN-DR-AG"])
+    result = runner.invoke(app, ["mrs", "applicability", "--split", "rq12-syn"])
+    assert result.exit_code == 0, result.output
+    text = (project.reports_dir / "mr_applicability.md").read_text()
+    assert "| rq12-syn |" in text and "MR1" in text
+    assert not (project.root / "logs" / "test_access.jsonl").exists()
