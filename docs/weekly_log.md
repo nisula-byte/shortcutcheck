@@ -69,4 +69,14 @@ LightGBM on MR1 and MR4), as in the pilot. VS-AG: only LightGBM (MR1 0.062, MR4 
 LR/SVM MR4 0.012-0.013, MLP 0.022, all below the pre-registered 5%. Behaviour-only control exactly 0.
 VS-AG full and behaviour-only models differ little in F1 (e.g. LR 0.914 vs 0.912), consistent with
 little metadata reliance there. Reported as pre-registered; thresholds not changed, no re-run.
+Step 3.4 (RQ2): `make rq2` ran once (2 h 7 min); prereg-check passed, each test partition opened
+once, analysis code as pre-registered. H2: NOT SUPPORTED, and the effect is reversed: debiased
+models violate MORE than biased ones on MR4 (debiased-test inputs: DR 0.243 vs 0.048, VS 0.130 vs
+0.046; two-sided p <= 3e-7), also against the size-matched arm and on the biased-test inputs.
+Exploratory (not pre-registered, scripts/rq2_exploratory.py): in the DR family the debiased models
+flip invalid-year (1980) inputs at 0.20-0.29 vs 0.002 for biased models; LightGBM, LR and SVM
+drive the increase. Dada's debiasing does not remove model-level metadata reliance here.
+Step 3.5 (RQ3 pool): 300 full-feature models in 60 configurations built from rq3.yaml (34 min, no
+test data); every skew level has 3,286 goodware + 3,013 malware; contrary share 0.516 (skew 0) to
+0.209 (skew 0.75). Built twice: 300/300 rows identical including validation-probability hashes.
 

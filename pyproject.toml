@@ -39,5 +39,5 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "mlflow.*", "shap.*", "lightgbm.*", "scipy.*", "matplotlib.*"]
+module = ["sklearn.*", "mlflow.*", "shap.*", "lightgbm.*", "scipy.*", "matplotlib.*", "joblib.*"]
 ignore_missing_imports = true

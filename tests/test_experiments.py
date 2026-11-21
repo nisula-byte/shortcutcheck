@@ -294,8 +294,3 @@ def test_experiment_cli_run_and_compare(project: Config) -> None:
     )
     assert result.exit_code == 1 and "DIFFERENT" in result.output
     assert not (project.root / "logs" / "test_access.jsonl").exists()
-
-
-def test_pool_experiment_is_not_run_by_the_models_engine() -> None:
-    result = runner.invoke(app, ["experiment", "run", str(EXPERIMENTS / "rq3.yaml")])
-    assert result.exit_code == 2 and "step 3.5" in result.output

@@ -224,4 +224,9 @@ def load_experiment(path: Path, cfg: Config) -> Experiment:
         raise ExperimentConfigError("A 'models' experiment needs at least one run.")
     if engine == "pool":
         _split(cfg, str(exp.pool["split"]), "pool")
+        if exp.feature_sets != ("full",):
+            raise ExperimentConfigError(
+                "The RQ3 pool holds full-feature models only: behaviour-only models score 0 on "
+                "MR1-MR4 by construction and would inflate the correlation (roadmap 3.5)."
+            )
     return exp
