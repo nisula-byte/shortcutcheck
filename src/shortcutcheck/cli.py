@@ -13,7 +13,13 @@ import pandas as pd
 import typer
 
 from shortcutcheck import pilot as pilot_mod
-from shortcutcheck.addenda import AddendumNotCommittedError, phase_a, phase_b, require_committed
+from shortcutcheck.addenda import (
+    AddendumNotCommittedError,
+    fix_poc,
+    phase_a,
+    phase_b,
+    require_committed,
+)
 from shortcutcheck.analysis import figures as fig_mod
 from shortcutcheck.analysis import h1 as h1_mod
 from shortcutcheck.analysis import h2 as h2_mod
@@ -862,6 +868,43 @@ def addendum_b(
     text = phase_b.render(result_b, h2_mod.h2_tests(rows), head)
     write_frame(result_b.table, folder / "addendum_b_tests.csv", cfg.raw_root)
     write_text(folder / "addendum_b.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@addendum_app.command("c")
+def addendum_c(
+    analyse_only: bool = typer.Option(False, help="Only re-analyse reports/addendum_c/rows.csv."),
+    dry_run: bool = typer.Option(
+        False, help="Tiny run (one split, LR only, one seed) into a scratch folder; not a result."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Addendum C: metamorphic augmentation fix, proof of concept (validation data only)."""
+    cfg = _cfg(config)
+    try:
+        prereg = require_committed(cfg.root, fix_poc.FILE)
+    except AddendumNotCommittedError as err:
+        typer.echo(str(err))
+        raise typer.Exit(code=2) from err
+    folder = cfg.reports_dir / ("addendum_c_dry_run" if dry_run else "addendum_c")
+    commit = git_commit(cfg.root)
+    if not analyse_only:
+        kwargs: dict[str, object] = {}
+        if dry_run:
+            kwargs = {"splits": ("rq12-DR-AG_deb",), "algorithms": ("lr",), "seeds": (11,)}
+        rows = fix_poc.run(
+            cfg,
+            commit,
+            progress=lambda m: typer.echo(m, err=True),
+            log_mlflow=not dry_run,
+            **kwargs,  # type: ignore[arg-type]
+        )
+        write_frame(rows, folder / "rows.csv", cfg.raw_root)
+    rows = pd.read_csv(folder / "rows.csv")
+    result = fix_poc.judge(rows)
+    text = fix_poc.render(rows, result, fix_poc.header(commit, prereg))
+    write_frame(result.tests, folder / "held_out_tests.csv", cfg.raw_root)
+    write_text(folder / "addendum_c.md", text, cfg.raw_root)
     typer.echo(text)
 
 
