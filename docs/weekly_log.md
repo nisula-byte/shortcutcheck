@@ -147,3 +147,24 @@ instability of debiased models (D20). Limits: validation partitions only, 3 seed
 data, e.g. the RQ1/RQ2 test partitions and the 2015-16 holdout (decay), before any claim.
 An untracked file src/shortcutcheck/training/augment.py (created 01:50, not by this work) was
 found in the workspace; it is not used or committed.
+Phase C / Addendum D (22 Nov): confirmatory tests. PREREGISTRATION-ADDENDUM-D.md and its code
+committed together (4d078ca) before any of its data was opened; dry run on validation data
+6.5 min, no test access. Real run about 2 h after Nisula's go; 6 partitions opened once each
+(4 RQ1/RQ2 test partitions, 2015-16 holdout for the first time, 2017-19); log now 316 lines.
+All 300 pool models matched their step 3.5 hashes before the holdout was opened.
+- **H4 SUPPORTED** (3 of 4 splits): MR4 baseline -> fixed on test inputs DR-AG 0.112 -> 0.004,
+  DR-AG_deb 0.208 -> 0.025, VS-AG 0.028 -> 0.008, VS-AG_deb 0.146 -> 0.022 (all Holm p 1.2e-07).
+  VS-AG_deb fails H4b (F1 0.822 -> 0.799, drop 0.023 > 0.02). Duplicate control: no change in
+  MR4, so the effect is the metadata change, not more data. H4d (contrary-app accuracy up):
+  3 of 4 splits.
+- **H5a HOLDS:** decay 2012-14 -> 2015-16 baseline 0.081 vs fixed 0.054 (p 0.033); duplicate
+  control 0.083. Reported: 2017-19 decay 0.626 vs 0.556 (p 2.3e-05).
+- **H5b HOLDS:** rho(MR4 at monitoring time on 2015-16 inputs, decay) 0.852 (0.751 to 0.907),
+  un-injected 150 models; full pool 0.769. **H5c holds** against PSI (0.196), confidence drop
+  (-0.668) and ATC (0.124), Holm p 0.001 each. Pre-deployment MR4 again no signal (-0.090),
+  replicating the H3 null on a second period.
+EXPLORATORY (scripts/addendum_d_exploratory.py): part of the H5b correlation is between
+algorithms; after removing algorithm means rho is 0.521 (un-injected) / 0.727 (full pool), still
+above every baseline (PSI 0.153 / 0.044); within each algorithm rho is positive (0.18 to 0.83).
+Confidence drop's |rho| is 0.668 but in the opposite direction to its pre-registered
+orientation. The fix raised MR5 flips on VS-AG_deb (0.259 -> 0.321).
