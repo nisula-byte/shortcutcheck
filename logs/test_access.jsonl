@@ -1,0 +1,2 @@
+{"utc": "2026-11-21T04:29:37+00:00", "split": "rq12-DR-AG", "purpose": "rq1 (roadmap step 3.3), config configs/experiments/rq1.yaml: MR inputs (labels unused) and the detection table (labels used once)", "rows": 1592, "git_commit": "5fe74624552a11b0cd807edaa76cac9a38e25a06"}
+{"utc": "2026-11-21T04:31:53+00:00", "split": "rq12-VS-AG", "purpose": "rq1 (roadmap step 3.3), config configs/experiments/rq1.yaml: MR inputs (labels unused) and the detection table (labels used once)", "rows": 20903, "git_commit": "5fe74624552a11b0cd807edaa76cac9a38e25a06"}

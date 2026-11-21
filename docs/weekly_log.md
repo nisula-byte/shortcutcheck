@@ -62,3 +62,11 @@ single primary signal; the skew injection and hyperparameter settings are now ex
 ## Week 1 (w/c 23 Nov 2026)
 
 -
+Step 3.3 (RQ1): `make rq1` ran once (53 min) on the test partitions; prereg-check passed first, each
+test partition was opened once (logs/test_access.jsonl), and the analysis code was the pre-registered
+version. H1: PARTIALLY SUPPORTED. DR-AG: 4 of 5 algorithms show the shortcut (LR, SVM, RF on MR4;
+LightGBM on MR1 and MR4), as in the pilot. VS-AG: only LightGBM (MR1 0.062, MR4 0.069); RF MR4 0.023,
+LR/SVM MR4 0.012-0.013, MLP 0.022, all below the pre-registered 5%. Behaviour-only control exactly 0.
+VS-AG full and behaviour-only models differ little in F1 (e.g. LR 0.914 vs 0.912), consistent with
+little metadata reliance there. Reported as pre-registered; thresholds not changed, no re-run.
+
