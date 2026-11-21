@@ -1,4 +1,4 @@
-.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot pilot-compare rebuild rerun-check rq1 rq2 rq3
+.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot pilot-compare rebuild rerun-check rq1 rq2 rq3 prereg-check
 
 setup:
 	python -m pip install -r requirements-dev.txt
@@ -74,11 +74,18 @@ rerun-check:
 # Phase 3 experiments. Each regenerates its tables and figures from one config.
 # RQ1 and RQ2 open the locked test partitions (once per split, logged). Run only after
 # PREREGISTRATION.md is committed (roadmap 3.2).
-rq1:
+rq1: prereg-check
 	shortcutcheck experiment run configs/experiments/rq1.yaml
+	shortcutcheck analyse rq1
 
-rq2:
+rq2: prereg-check
 	shortcutcheck experiment run configs/experiments/rq2.yaml
+	shortcutcheck analyse rq2
 
-rq3:
+rq3: prereg-check
 	shortcutcheck experiment run configs/experiments/rq3.yaml
+	shortcutcheck analyse rq3
+
+# Step 3.2 Check: PREREGISTRATION.md committed before any test-partition access.
+prereg-check:
+	shortcutcheck prereg-check
