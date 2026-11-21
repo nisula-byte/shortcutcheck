@@ -1,0 +1,39 @@
+{
+  "name": "dada-DR-AG",
+  "created_utc": "2026-11-21T16:18:40+00:00",
+  "counts": {
+    "train": {
+      "rows": 10608,
+      "goodware": 5303,
+      "malware": 5305
+    },
+    "val": {
+      "rows": 0,
+      "goodware": 0,
+      "malware": 0
+    },
+    "test": {
+      "rows": 0,
+      "goodware": 0,
+      "malware": 0
+    }
+  },
+  "kind": "dada",
+  "train_sets": [
+    "DR-AG-training"
+  ],
+  "test_sets": [],
+  "sources": {
+    "DR-AG-training": "da0ffe3eb8d271b292e26a7ff89f5975c2538c89149f0fffb5176a61fe4f0ba3"
+  },
+  "test_removed_for_overlap_with_train": 0,
+  "dedup": {
+    "rows_in": 10608,
+    "unlabelled_dropped": 0,
+    "duplicate_rows_dropped": 0,
+    "conflicting_hashes_dropped": 0,
+    "rows_out": 10608,
+    "conflicting_feature_groups": 0,
+    "rows_in_conflicting_feature_groups": 0
+  }
+}

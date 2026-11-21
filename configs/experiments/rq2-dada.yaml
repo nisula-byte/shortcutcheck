@@ -1,0 +1,45 @@
+# Addendum B (PREREGISTRATION-ADDENDUM-B.md): RQ2 under Dada's own train/test protocol.
+# Same design as rq2.yaml (D17); only the splits differ (dada-*: Dada's files, no re-split).
+experiment: rq2-dada
+step: "addendum-B"
+engine: models
+mlflow_experiment: addendum-b-rq2-dada
+seeds: [11, 22, 33, 44, 55]
+algorithms: [lr, svm, rf, lgbm, mlp]
+feature_sets: [full]
+mrs: [MR1, MR2, MR3, MR4, MR5, MR6]
+realism: true
+mr_sample: 5000
+sample_seed: 11
+runs:
+  - name: DR-AG
+    train: dada-DR-AG
+    evaluate:
+      - {split: dada-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-DR-AG_deb]}
+  - name: DR-AG-size-matched
+    train: dada-DR-AG
+    arm: size-matched
+    size_like: dada-DR-AG_deb
+    evaluate:
+      - {split: dada-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-DR-AG_deb]}
+  - name: DR-AG_deb
+    train: dada-DR-AG_deb
+    evaluate:
+      - {split: dada-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-DR-AG]}
+  - name: VS-AG
+    train: dada-VS-AG
+    evaluate:
+      - {split: dada-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-VS-AG_deb]}
+      - {split: dada-VS-AG, partition: test, role: h2-biased, exclude_train_of: [dada-VS-AG_deb]}
+  - name: VS-AG-size-matched
+    train: dada-VS-AG
+    arm: size-matched
+    size_like: dada-VS-AG_deb
+    evaluate:
+      - {split: dada-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-VS-AG_deb]}
+      - {split: dada-VS-AG, partition: test, role: h2-biased, exclude_train_of: [dada-VS-AG_deb]}
+  - name: VS-AG_deb
+    train: dada-VS-AG_deb
+    evaluate:
+      - {split: dada-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [dada-VS-AG]}
+      - {split: dada-VS-AG, partition: test, role: h2-biased, exclude_train_of: [dada-VS-AG]}

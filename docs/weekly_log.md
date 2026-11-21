@@ -119,3 +119,15 @@ parts and re-split them at random, which breaks that protocol. The H2 result the
 Dada's debiased apps under our re-split protocol, not for Dada used as its authors intended.
 Earlier descriptions ("Dada balances metadata between malware and goodware") were too strong.
 
+Addendum B (21-22 Nov). PREREGISTRATION-ADDENDUM-B.md (52260b1) committed before Dada's own test
+files were opened (first access 17:52 UTC 21 Nov; 3 load_test() calls, one per test file).
+`shortcutcheck addendum b` ran in about 2 h 45 min. Verdict by the pre-registered rule:
+**REPLICATES.** VS-AG testable (min 1,209 counted MR4 inputs): MR4 on Dada's debiased test file,
+published 0.040 vs debiased-trained 0.143 (Holm p 1.8e-07, Cliff's delta -0.73); size-matched
+0.028 vs 0.143 (delta -0.91). DR-AG not testable (min 29 counted MR4 inputs, rule needs 30; its
+debiased test file has 40 apps, 4 malware); its tests point the same way but are reported only.
+EXPLORATORY caveat (scripts/rq2_dada_exploratory.py): debiased-trained models are also less
+stable under the permission MRs that do not touch metadata (MR6 0.051 vs 0.007, 7.0x; MR5 1.4x),
+and their F1 is much lower (0.45 vs 0.74-0.79). So the reversal shows generally less stable
+models, not specifically more reliance on metadata. Claims must say "less robust to metadata
+perturbations", not "more shortcut reliance".
