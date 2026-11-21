@@ -24,6 +24,7 @@ from shortcutcheck.data.dedup import DedupReport, deduplicate
 from shortcutcheck.data.register import register_zip, sha256_of
 from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import (
+    load_part,
     make_rq3_split,
     make_rq12_split,
     save_split,
@@ -42,6 +43,8 @@ from shortcutcheck.provenance import git_commit
 from shortcutcheck.runner import known_answers as ka_mod
 from shortcutcheck.synthetic import make_synthetic_dada, write_synthetic_config
 from shortcutcheck.training import baselines as base_mod
+from shortcutcheck.training import pool as pool_mod
+from shortcutcheck.training.features import select
 
 app = typer.Typer(help="ShortcutCheck: metamorphic shortcut testing for malware detectors.")
 data_app = typer.Typer(help="Phase 1 data steps (roadmap 1.3-1.7).")
@@ -449,11 +452,27 @@ def experiment_run(
     cfg = _cfg(config)
     exp = load_experiment(exp_config, cfg)
     if exp.engine == "pool":
-        typer.echo(
-            f"'{exp.experiment}' is the RQ3 model pool. Its settings are validated and fixed in "
-            f"{exp_config}; the pool is built in roadmap step 3.5."
+        folder = out or cfg.reports_dir / exp.experiment
+        commit = git_commit(cfg.root)
+        model_dir = (out / "models") if out else cfg.root / "data" / "models" / exp.experiment
+        pool = pool_mod.build_pool(
+            cfg, exp, commit, model_dir, progress=lambda m: typer.echo(m, err=True)
         )
-        raise typer.Exit(code=2)
+        write_frame(pool, folder / "pool_models.csv", cfg.raw_root)
+        x, y = select(
+            load_part(cfg, str(exp.pool["split"]), "train"),
+            "full",
+            cfg.metadata_columns,
+            cfg.id_column,
+            cfg.dropped_features,
+        )
+        skew = exp.pool["skew"]
+        plan = pool_mod.skew_plan(x, y, str(skew["column"]), [float(v) for v in skew["levels"]])
+        text = pool_mod.render_pool(pool, plan.median, commit)
+        write_text(folder / "pool.md", text, cfg.raw_root)
+        typer.echo(text)
+        typer.echo("Pool built (step 3.5). Signals (3.6) and ground truth (3.7) come next.")
+        return
     result = engine_mod.run_experiment(
         cfg, exp, git_commit(cfg.root), progress=lambda m: typer.echo(m, err=True)
     )

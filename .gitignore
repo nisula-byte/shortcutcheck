@@ -26,3 +26,4 @@ mlflow.db
 
 # macOS Finder metadata
 .DS_Store
+data/models/
