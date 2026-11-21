@@ -225,6 +225,54 @@ def _build_holdout(
     return split, extra, report
 
 
+def _build_dada(
+    cfg: Config, train_sets: list[str], test_sets: list[str]
+) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
+    """Dada's own protocol: its training file trains, its test file tests. No re-splitting.
+
+    Each part is deduplicated as in step 1.6. Test apps that also occur in the training part
+    are removed (counted in the manifest). There is no validation part.
+    """
+    train, train_sources, report = _combined(cfg, train_sets)
+    parts = [train.assign(**{PART: "train"})]
+    sources = dict(train_sources)
+    overlap = 0
+    if test_sets:
+        test, test_sources, _ = _combined(cfg, test_sets)
+        seen = test[cfg.id_column].isin(set(train[cfg.id_column]))
+        overlap = int(seen.sum())
+        parts.append(test[~seen].assign(**{PART: "test"}))
+        sources.update(test_sources)
+    split = pd.concat(parts, ignore_index=True)
+    extra: dict[str, object] = {
+        "kind": "dada",
+        "train_sets": train_sets,
+        "test_sets": test_sets,
+        "sources": sources,
+        "test_removed_for_overlap_with_train": overlap,
+        "dedup": asdict(report),
+    }
+    return split, extra, report
+
+
+@data_app.command("split-dada")
+def split_dada(
+    name: str = typer.Option(..., help="Split name, e.g. dada-VS-AG_deb."),
+    train: list[str] = typer.Option(
+        ..., "--train", help="Dada training file(s), e.g. VS-AG-training."
+    ),
+    test: list[str] | None = typer.Option(None, "--test", help="Dada test file(s), if any."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Addendum B: freeze a split that follows Dada's own train/test files exactly."""
+    cfg = _cfg(config)
+    split, extra, report = _build_dada(cfg, list(train), list(test or []))
+    paths = save_split(cfg, name, split, extra)
+    _write_dedup(cfg, name, report)
+    counts = split[PART].value_counts().to_dict()
+    typer.echo(f"Frozen Dada-protocol split '{name}' {counts} -> {paths.index_dir}.")
+
+
 @data_app.command("split-holdout")
 def split_holdout(
     years: list[int] = typer.Option(..., "--years", help="Years to hold out, e.g. 2015 2016."),
@@ -267,6 +315,10 @@ def rebuild(config: Path | None = ConfigOpt) -> None:
             # The configured order matters: sets are concatenated before the seeded shuffle.
             sets = cfg.rq12_splits.get(name) or list(manifest["sources"])
             split, extra, _ = _build_rq12(cfg, sets)
+        elif manifest["kind"] == "dada":
+            split, extra, _ = _build_dada(
+                cfg, list(manifest["train_sets"]), list(manifest["test_sets"])
+            )
         elif manifest["kind"] == "holdout":
             years = [int(y) for y in manifest["years"]]
             split, extra, _ = _build_holdout(cfg, manifest["candidate"], years)
