@@ -136,6 +136,24 @@ changed **and** whose new values are valid and realistic.
 | 2.5 Known answers | `shortcutcheck mrs known-answers` | `reports/known_answers.md`, MLflow runs |
 | 2.7 Pilot RQ1 | `make pilot` (plan: `docs/pilot_plan.md`) | `reports/pilot_rq1_rq12-DR-AG.{md,csv}`, MLflow runs |
 
+## Phase 3: experiments
+
+Each experiment is one YAML file in `configs/experiments/` (step 3.1). The hypotheses, exact
+tests and decision rules are fixed in `PREREGISTRATION.md` (step 3.2), committed before any
+test partition was opened.
+
+```bash
+make rerun-check   # step 3.1 Check: the pilot config twice -> identical, and equal to step 2.7
+make prereg-check  # step 3.2 Check: PREREGISTRATION.md predates every test access
+make rq1           # RQ1: run configs/experiments/rq1.yaml, then judge H1 (reports/rq1/)
+make rq2           # RQ2: paired biased / size-matched / debiased models, judge H2 (reports/rq2/)
+make rq3           # RQ3: model pool and decay signals (built in steps 3.5-3.7), judge H3
+```
+
+`shortcutcheck experiment run <config>` writes `rows.csv`, `detection.csv`, `inputs.csv` and
+`run.md`; `shortcutcheck analyse rq1|rq2|rq3` writes the hypothesis report and figures. Every
+report states whether the analysis code still equals the pre-registered version.
+
 ## Rules the code enforces
 
 - **Test set locked.** Only `shortcutcheck.evaluation.locked_test.load_test()` reads test data.

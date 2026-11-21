@@ -1,0 +1,52 @@
+# RQ3 (roadmap steps 3.5-3.8): does the pre-deployment MR violation rate predict later decay?
+# H3a-H3c in PREREGISTRATION.md. Every setting below is fixed before any 2017-19 data is opened.
+# The pool is built in step 3.5, signals in 3.6, ground truth in 3.7, analysis in 3.8.
+experiment: rq3
+step: "3.5-3.8"
+engine: pool
+mlflow_experiment: phase3-rq3
+seeds: [11, 22, 33, 44, 55]
+algorithms: [lr, svm, rf, lgbm, mlp]
+feature_sets: [full]       # behaviour-only models are excluded: 0 on MR1-MR4 by construction
+mrs: [MR1, MR3, MR4]       # core MRs that apply to AndroCT (MR2 not applicable, D10)
+realism: true
+mr_sample: 5000
+sample_seed: 11
+pool:
+  split: rq3-AndroCT-2012-14-vs-2017-19   # train/val = 2012-14 apps, test = 2017-19 apps
+  skew:
+    # Injected shortcut on apk_size. "Contrary" apps: malware with apk_size below the training
+    # median, or goodware at or above it. Level q removes a random fraction q of each class's
+    # contrary apps (seed = model seed). Every level is then cut (stratified, seeded) to the same
+    # per-class sizes: those left at the highest level. So only the skew differs between levels.
+    column: apk_size
+    levels: [0.0, 0.25, 0.5, 0.75]
+    settings_per_level: [6, 2, 2, 2]   # D8: 30 un-injected configurations, 60 in total
+  hyperparameters:
+    # Setting 0 = the RQ1 defaults (training/baselines.build_model). Levels 1-3 use settings 0-1.
+    lr:   [{}, {C: 0.01}, {C: 0.001}, {C: 0.1}, {C: 10.0}, {C: 100.0}]
+    svm:  [{}, {C: 0.01}, {C: 0.001}, {C: 0.1}, {C: 10.0}, {C: 100.0}]
+    rf:   [{}, {max_depth: 8}, {max_depth: 4}, {min_samples_leaf: 20}, {max_features: 0.5}, {max_features: log2}]
+    lgbm: [{}, {num_leaves: 7}, {num_leaves: 127}, {learning_rate: 0.03}, {min_child_samples: 100}, {colsample_bytree: 0.5}]
+    mlp:  [{}, {hidden_layer_sizes: [16]}, {hidden_layer_sizes: [256]}, {hidden_layer_sizes: [64, 64]}, {alpha: 0.01}, {alpha: 1.0}]
+  signals:
+    pre_deployment:               # 2012-14 validation partition, no labels
+      mr_primary: MR4             # H3a/H3b signal: realism-filtered MR4 violation rate
+      mr_secondary: [MR1, MR3, core-mean, MR4-unfiltered]
+      shap_metadata_share:
+        explainer: {rf: tree, lgbm: tree, lr: linear, svm: permutation, mlp: permutation}
+        inputs: 500               # uniform sample of validation inputs, seed 11
+        background: 100           # uniform sample of training inputs, seed 11
+    monitoring:                   # 2017-19 test inputs, labels unused
+      mr: MR4
+      confidence_drop: true       # mean max(p, 1-p) on validation minus on test
+      psi: {bins: 10, edges: validation-deciles, epsilon: 0.0001}
+      atc: {score: max-confidence}   # threshold fitted on validation labels only
+  ground_truth:
+    threshold: 0.5
+    f1_drop: f1(validation 2012-14) - f1(test 2017-19)
+    by_test_year: [2017, 2018, 2019]   # D9 secondary decay curve
+  analysis:
+    bootstrap: {resamples: 2000, seed: 11, unit: configuration}
+    alpha: 0.05
+    h3a_rho_min: 0.5

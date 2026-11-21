@@ -1,0 +1,59 @@
+# RQ2 (roadmap step 3.4): does debiased training lower violation rates? H2 in PREREGISTRATION.md.
+#
+# Paired by algorithm and seed. Within a family, the biased, size-matched biased and debiased
+# models are scored on the SAME inputs, with every app any of them trained on removed:
+#   h2-deb    the debiased split's test partition (primary)
+#   h2-biased the biased split's test partition (secondary)
+# Size-matched arm: the biased training set cut (stratified, per seed) to the debiased training
+# set's size, to separate "debiased data" from "less data". cross-family: each published model
+# scored on the other family's matching test partition (descriptive only).
+experiment: rq2
+step: "3.4"
+engine: models
+mlflow_experiment: phase3-rq2
+seeds: [11, 22, 33, 44, 55]
+algorithms: [lr, svm, rf, lgbm, mlp]
+feature_sets: [full]
+mrs: [MR1, MR2, MR3, MR4, MR5, MR6]
+realism: true
+mr_sample: 5000
+sample_seed: 11
+runs:
+  - name: DR-AG
+    train: rq12-DR-AG
+    evaluate:
+      - {split: rq12-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-DR-AG_deb]}
+      - {split: rq12-DR-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-DR-AG_deb]}
+      - {split: rq12-VS-AG, partition: test, role: cross-family}
+  - name: DR-AG-size-matched
+    train: rq12-DR-AG
+    arm: size-matched
+    size_like: rq12-DR-AG_deb
+    evaluate:
+      - {split: rq12-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-DR-AG_deb]}
+      - {split: rq12-DR-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-DR-AG_deb]}
+  - name: DR-AG_deb
+    train: rq12-DR-AG_deb
+    evaluate:
+      - {split: rq12-DR-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-DR-AG]}
+      - {split: rq12-DR-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-DR-AG]}
+      - {split: rq12-VS-AG_deb, partition: test, role: cross-family}
+  - name: VS-AG
+    train: rq12-VS-AG
+    evaluate:
+      - {split: rq12-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-VS-AG_deb]}
+      - {split: rq12-VS-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-VS-AG_deb]}
+      - {split: rq12-DR-AG, partition: test, role: cross-family}
+  - name: VS-AG-size-matched
+    train: rq12-VS-AG
+    arm: size-matched
+    size_like: rq12-VS-AG_deb
+    evaluate:
+      - {split: rq12-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-VS-AG_deb]}
+      - {split: rq12-VS-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-VS-AG_deb]}
+  - name: VS-AG_deb
+    train: rq12-VS-AG_deb
+    evaluate:
+      - {split: rq12-VS-AG_deb, partition: test, role: h2-deb, exclude_train_of: [rq12-VS-AG]}
+      - {split: rq12-VS-AG, partition: test, role: h2-biased, exclude_train_of: [rq12-VS-AG]}
+      - {split: rq12-DR-AG_deb, partition: test, role: cross-family}
