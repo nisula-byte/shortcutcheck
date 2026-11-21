@@ -1,4 +1,4 @@
-.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot pilot-compare rebuild rerun-check rq1 rq2 rq3 rq3-signals prereg-check
+.PHONY: setup lint test check dry-run splits baselines baselines-vs-ag mr-applicability pilot pilot-compare rebuild rerun-check rq1 rq2 rq3 rq3-signals rq3-truth rq3-analyse prereg-check
 
 setup:
 	python -m pip install -r requirements-dev.txt
@@ -85,6 +85,15 @@ rq2: prereg-check
 rq3: prereg-check
 	shortcutcheck experiment run configs/experiments/rq3.yaml
 	shortcutcheck experiment signals configs/experiments/rq3.yaml
+	shortcutcheck experiment ground-truth configs/experiments/rq3.yaml
+	shortcutcheck analyse rq3
+
+# Step 3.7 alone: F1 drop per pool model (one load_test() per model), then the pool table.
+rq3-truth: prereg-check
+	shortcutcheck experiment ground-truth configs/experiments/rq3.yaml
+
+# Step 3.8 alone: judge H3 and the Gate 3 outcome with the pre-registered code.
+rq3-analyse: prereg-check
 	shortcutcheck analyse rq3
 
 # Step 3.6 alone: signals for the already-built pool (opens 2017-19 inputs once, no labels).

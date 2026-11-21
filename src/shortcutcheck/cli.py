@@ -33,6 +33,7 @@ from shortcutcheck.data.splits import (
 )
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.evaluation import experiment as engine_mod
+from shortcutcheck.evaluation import rq3_ground_truth as rq3_truth
 from shortcutcheck.evaluation import rq3_signals as rq3_sig
 from shortcutcheck.evaluation.preregistration import analysis_status, check_preregistration
 from shortcutcheck.experiments.compare import compare_tables
@@ -524,6 +525,42 @@ def experiment_signals(
     typer.echo(text)
     if not c.identical:
         raise typer.Exit(code=1)
+
+
+@exp_app.command("ground-truth")
+def experiment_ground_truth(
+    exp_config: Path = typer.Argument(..., help="configs/experiments/rq3.yaml"),
+    out: Path | None = typer.Option(None, help="Output folder (default reports/<experiment>)."),
+    dry_run: bool = typer.Option(
+        False, help="Use the validation partition in place of the test partition (no test access)."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 3.7: F1 drop per pool model (one load_test() per model) and the pool table."""
+    cfg = _cfg(config)
+    exp = load_experiment(exp_config, cfg)
+    if dry_run and out is None:
+        typer.echo("--dry-run needs --out, so its numbers can never land in reports/.")
+        raise typer.Exit(code=2)
+    folder = out or cfg.reports_dir / exp.experiment
+    signals = pd.read_csv(
+        folder / "signals.csv" if not dry_run else cfg.reports_dir / exp.experiment / "signals.csv"
+    )
+    model_dir = cfg.root / "data" / "models" / exp.experiment
+    commit = git_commit(cfg.root)
+    before = rq3_truth.n_test_accesses(cfg)
+    truth = rq3_truth.ground_truth(
+        cfg, exp, model_dir, dry_run=dry_run, progress=lambda m: typer.echo(m, err=True)
+    )
+    n_log = rq3_truth.n_test_accesses(cfg) - before
+    pool = rq3_truth.assemble_pool(signals, truth, commit)
+    write_frame(truth, folder / "ground_truth.csv", cfg.raw_root)
+    write_frame(pool, folder / "pool.csv", cfg.raw_root)
+    text = rq3_truth.render_truth(truth, pool, n_log, commit)
+    if dry_run:
+        text = "# DRY RUN on the validation partition: not results\n\n" + text
+    write_text(folder / "ground_truth.md", text, cfg.raw_root)
+    typer.echo(text)
 
 
 @exp_app.command("compare")
