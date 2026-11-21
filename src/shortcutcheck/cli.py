@@ -24,6 +24,7 @@ from shortcutcheck.data.dedup import DedupReport, deduplicate
 from shortcutcheck.data.register import register_zip, sha256_of
 from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import (
+    PART,
     load_part,
     make_rq3_split,
     make_rq12_split,
@@ -195,6 +196,55 @@ def _build_rq3(cfg: Config, candidate: str) -> tuple[pd.DataFrame, dict[str, obj
     return split, extra, report
 
 
+def _build_holdout(
+    cfg: Config, candidate: str, years: list[int]
+) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
+    """A held-out time window: every app of ``years`` locked as test data (no train/val).
+
+    Apps already in the primary RQ3 split built from the same candidate are removed, so the
+    holdout shares no app with any model's training, validation or test data.
+    """
+    cand = cfg.rq3_candidates[candidate]
+    raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
+    clean, report = deduplicate(raw_pool, cfg.id_column)
+    held = audit_mod.window(clean, years, cfg.android_first_year, cfg.collection_year)
+    used, _, _ = _build_rq3(cfg, candidate)
+    overlap = held[cfg.id_column].isin(set(used[cfg.id_column]))
+    split = held[~overlap].assign(**{PART: "test"}).reset_index(drop=True)
+    extra: dict[str, object] = {
+        "kind": "holdout",
+        "candidate": candidate,
+        "years": years,
+        "sources": {n: sha256_of(s.features_path) for n, s in _named(cfg, sources)},
+        "removed_for_overlap_with_rq3_split": int(overlap.sum()),
+        "dedup": asdict(report),
+    }
+    return split, extra, report
+
+
+@data_app.command("split-holdout")
+def split_holdout(
+    years: list[int] = typer.Option(..., "--years", help="Years to hold out, e.g. 2015 2016."),
+    name: str = typer.Option(..., help="Split name, e.g. rq3-AndroCT-holdout-2015-16."),
+    candidate: str | None = typer.Option(
+        None, help="An rq3_candidates entry (default: rq3_primary in config)."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Freeze a time window as a locked, test-only split (readable only via load_test())."""
+    cfg = _cfg(config)
+    candidate = candidate or cfg.rq3_primary
+    if candidate not in cfg.rq3_candidates:
+        raise typer.BadParameter(f"Unknown candidate '{candidate}'.")
+    split, extra, report = _build_holdout(cfg, candidate, sorted(years))
+    paths = save_split(cfg, name, split, extra)
+    _write_dedup(cfg, name, report)
+    typer.echo(
+        f"Frozen holdout '{name}' ({len(split)} apps, years {sorted(years)}) -> "
+        f"{paths.index_dir}. Locked: only load_test() can read it. Commit the index files."
+    )
+
+
 @data_app.command("rebuild")
 def rebuild(config: Path | None = ConfigOpt) -> None:
     """Rebuild data/processed on a new machine from the raw data and the frozen splits.
@@ -214,6 +264,9 @@ def rebuild(config: Path | None = ConfigOpt) -> None:
             # The configured order matters: sets are concatenated before the seeded shuffle.
             sets = cfg.rq12_splits.get(name) or list(manifest["sources"])
             split, extra, _ = _build_rq12(cfg, sets)
+        elif manifest["kind"] == "holdout":
+            years = [int(y) for y in manifest["years"]]
+            split, extra, _ = _build_holdout(cfg, manifest["candidate"], years)
         else:
             split, extra, _ = _build_rq3(cfg, manifest["candidate"])
         verify_against_index(cfg, name, split, extra["sources"])  # type: ignore[arg-type]
