@@ -33,6 +33,7 @@ from shortcutcheck.data.splits import (
 )
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.evaluation import experiment as engine_mod
+from shortcutcheck.evaluation import rq3_signals as rq3_sig
 from shortcutcheck.evaluation.preregistration import analysis_status, check_preregistration
 from shortcutcheck.experiments.compare import compare_tables
 from shortcutcheck.experiments.spec import load_experiment
@@ -483,6 +484,46 @@ def experiment_run(
     text = _run_summary(exp_config, result, exp.test_splits)
     write_text(folder / "run.md", text, cfg.raw_root)
     typer.echo(text)
+
+
+@exp_app.command("signals")
+def experiment_signals(
+    exp_config: Path = typer.Argument(..., help="configs/experiments/rq3.yaml"),
+    out: Path | None = typer.Option(None, help="Output folder (default reports/<experiment>)."),
+    workers: int = typer.Option(2, help="Worker processes (results do not depend on it)."),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 3.6: label-free signals for every pool model, plus an identical-rerun check."""
+    cfg = _cfg(config)
+    exp = load_experiment(exp_config, cfg)
+    folder = out or cfg.reports_dir / exp.experiment
+    model_dir = cfg.root / "data" / "models" / exp.experiment
+    commit = git_commit(cfg.root)
+    ctx = rq3_sig.build_context(cfg, exp, model_dir)  # opens 2017-19 once, inputs only
+    table = rq3_sig.compute_signals(
+        exp, ctx, workers=workers, progress=lambda m: typer.echo(m, err=True)
+    )
+    table["git_commit"] = commit
+    write_frame(table, folder / "signals.csv", cfg.raw_root)
+    text = rq3_sig.render_signals(table, commit)
+    # 3.1 Check for the signals: recompute a fixed subset in one process, same inputs.
+    subset = (
+        table.groupby("algorithm", sort=False).head(rq3_sig.RECHECK_PER_ALGORITHM)["model"].tolist()
+    )
+    again = rq3_sig.compute_signals(exp, ctx, workers=1, only=subset)
+    first = table[table["model"].isin(subset)].drop(columns="git_commit").reset_index(drop=True)
+    c = compare_tables(first, again)
+    verdict = "IDENTICAL" if c.identical else "DIFFERENT"
+    text += (
+        f"\n## Identical-rerun check\n\n{len(subset)} models ({', '.join(subset)}) recomputed "
+        f"in a single process on the same inputs: {c.identical_rows}/{c.n_rows} rows identical "
+        f"over {len(c.columns)} columns (largest difference {c.max_abs_diff:.3g}) -> "
+        f"**{verdict}**.\n"
+    )
+    write_text(folder / "signals.md", text, cfg.raw_root)
+    typer.echo(text)
+    if not c.identical:
+        raise typer.Exit(code=1)
 
 
 @exp_app.command("compare")
