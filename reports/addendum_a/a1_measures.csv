@@ -1,0 +1,25 @@
+family,set,arm,algorithm,group,auc,sd
+DR,rq12-DR-AG_deb,debiased,lgbm,M1 raw metadata,0.9397578805270262,0.0
+DR,rq12-DR-AG_deb,debiased,lgbm,M2 binned proxies,0.9060713411697836,0.0
+DR,rq12-DR-AG_deb,debiased,lgbm,M3 behaviour,0.9698884792602476,0.0
+DR,rq12-DR-AG,"biased, size-matched",lgbm,M1 raw metadata,0.9316440055834152,0.008732329182462884
+DR,rq12-DR-AG,"biased, size-matched",lgbm,M2 binned proxies,0.934282130486481,0.009605960801374174
+DR,rq12-DR-AG,"biased, size-matched",lgbm,M3 behaviour,0.9879511451170966,0.0018274024122380305
+DR,rq12-DR-AG_deb,debiased,lr,M1 raw metadata,0.8619228249113859,0.0
+DR,rq12-DR-AG_deb,debiased,lr,M2 binned proxies,0.8096331367642143,0.0
+DR,rq12-DR-AG_deb,debiased,lr,M3 behaviour,0.9393575058089201,0.0
+DR,rq12-DR-AG,"biased, size-matched",lr,M1 raw metadata,0.8699757276534147,0.010800352016250838
+DR,rq12-DR-AG,"biased, size-matched",lr,M2 binned proxies,0.8287972780850954,0.011830521053272825
+DR,rq12-DR-AG,"biased, size-matched",lr,M3 behaviour,0.9711885178100605,0.0035382831747262076
+VS,rq12-VS-AG_deb,debiased,lgbm,M1 raw metadata,0.7980703817574872,0.0
+VS,rq12-VS-AG_deb,debiased,lgbm,M2 binned proxies,0.769955067847827,0.0
+VS,rq12-VS-AG_deb,debiased,lgbm,M3 behaviour,0.9234073080958052,0.0
+VS,rq12-VS-AG,"biased, size-matched",lgbm,M1 raw metadata,0.7938496072534,0.005261418360238956
+VS,rq12-VS-AG,"biased, size-matched",lgbm,M2 binned proxies,0.7560763497328519,0.006851803116228441
+VS,rq12-VS-AG,"biased, size-matched",lgbm,M3 behaviour,0.9721658906136843,0.0030158438983350984
+VS,rq12-VS-AG_deb,debiased,lr,M1 raw metadata,0.6089287513127073,0.0
+VS,rq12-VS-AG_deb,debiased,lr,M2 binned proxies,0.5980256140708097,0.0
+VS,rq12-VS-AG_deb,debiased,lr,M3 behaviour,0.8865827909025912,0.0
+VS,rq12-VS-AG,"biased, size-matched",lr,M1 raw metadata,0.5834215572131912,0.008764120078571374
+VS,rq12-VS-AG,"biased, size-matched",lr,M2 binned proxies,0.5842781858757201,0.011945618318923244
+VS,rq12-VS-AG,"biased, size-matched",lr,M3 behaviour,0.9572584979476375,0.0018808496748164102
