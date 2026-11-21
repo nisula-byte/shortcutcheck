@@ -99,4 +99,23 @@ pre-registered direction (-0.78, -0.76). Secondary, descriptive: MR4 measured on
 (monitoring) rho 0.760 (0.572 to 0.871); MR1 pre-deployment 0.362. Not computed although listed
 as secondary in PREREGISTRATION.md: the plain-Gower realism sensitivity (to disclose).
 Roadmap decision: "No signal" -> lead with RQ2 and the tool; discuss framing with the supervisor.
+Phase A (21 Nov). A1: froze AndroCT 2015-16 as a locked test-only holdout (7,129 apps; 4,551
+goodware, 2,578 malware; not opened; reserved for a later monitoring test). Addendum A
+(PREREGISTRATION-ADDENDUM-A.md, f1148b2) committed before running A1-A3:
+- A1 (H2 mechanism, training data only): explanation (a) "proxy debiasing leaves the raw
+  shortcut" does not hold in either family, because Dada's binned Year/APK size still predict
+  the label strongly in our debiased training sets (AUC 0.906 DR, 0.770 VS). Explanation (b)
+  "weaker behaviour signal" holds for VS (behaviour AUC 0.923 vs 0.972) and narrowly misses for
+  DR (0.970 vs 0.988; margin 0.02).
+- A2 (convergent validity): does not hold by its rule. MR4 vs metadata F1 gain rho 0.562,
+  95% CI -0.037 to 0.856 (only 10 configurations).
+- A3 (plain-Gower sensitivity, promised in the pre-registration): H3 unchanged; un-injected
+  rho 0.114 (-0.285 to 0.488) vs 0.084 weighted.
+Correction found while interpreting A1: per the Dada DataPort page, Dada's debiasing moves a
+dataset's distribution of characteristics toward an AndroZoo extract (representativeness), and
+its mixed datasets are balanced per year in training with a year barrier before the test set.
+It does not aim to remove every metadata-label link. Our D5 pooled Dada's training and test
+parts and re-split them at random, which breaks that protocol. The H2 result therefore holds for
+Dada's debiased apps under our re-split protocol, not for Dada used as its authors intended.
+Earlier descriptions ("Dada balances metadata between malware and goodware") were too strong.
 

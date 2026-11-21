@@ -13,6 +13,7 @@ import pandas as pd
 import typer
 
 from shortcutcheck import pilot as pilot_mod
+from shortcutcheck.addenda import AddendumNotCommittedError, phase_a, require_committed
 from shortcutcheck.analysis import figures as fig_mod
 from shortcutcheck.analysis import h1 as h1_mod
 from shortcutcheck.analysis import h2 as h2_mod
@@ -24,6 +25,7 @@ from shortcutcheck.data.dedup import DedupReport, deduplicate
 from shortcutcheck.data.register import register_zip, sha256_of
 from shortcutcheck.data.safe_io import write_frame, write_text
 from shortcutcheck.data.splits import (
+    PART,
     load_part,
     make_rq3_split,
     make_rq12_split,
@@ -57,6 +59,8 @@ exp_app = typer.Typer(help="Phase 3 experiments, one YAML config each (roadmap 3
 app.add_typer(exp_app, name="experiment")
 analyse_app = typer.Typer(help="Judge H1-H3 as pre-registered (roadmap 3.2-3.8).")
 app.add_typer(analyse_app, name="analyse")
+addendum_app = typer.Typer(help="Pre-registered addenda (PREREGISTRATION-ADDENDUM-*.md).")
+app.add_typer(addendum_app, name="addendum")
 
 ConfigOpt = typer.Option(None, "--config", help="Path to configs/phase1.yaml.")
 
@@ -195,6 +199,55 @@ def _build_rq3(cfg: Config, candidate: str) -> tuple[pd.DataFrame, dict[str, obj
     return split, extra, report
 
 
+def _build_holdout(
+    cfg: Config, candidate: str, years: list[int]
+) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
+    """A held-out time window: every app of ``years`` locked as test data (no train/val).
+
+    Apps already in the primary RQ3 split built from the same candidate are removed, so the
+    holdout shares no app with any model's training, validation or test data.
+    """
+    cand = cfg.rq3_candidates[candidate]
+    raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
+    clean, report = deduplicate(raw_pool, cfg.id_column)
+    held = audit_mod.window(clean, years, cfg.android_first_year, cfg.collection_year)
+    used, _, _ = _build_rq3(cfg, candidate)
+    overlap = held[cfg.id_column].isin(set(used[cfg.id_column]))
+    split = held[~overlap].assign(**{PART: "test"}).reset_index(drop=True)
+    extra: dict[str, object] = {
+        "kind": "holdout",
+        "candidate": candidate,
+        "years": years,
+        "sources": {n: sha256_of(s.features_path) for n, s in _named(cfg, sources)},
+        "removed_for_overlap_with_rq3_split": int(overlap.sum()),
+        "dedup": asdict(report),
+    }
+    return split, extra, report
+
+
+@data_app.command("split-holdout")
+def split_holdout(
+    years: list[int] = typer.Option(..., "--years", help="Years to hold out, e.g. 2015 2016."),
+    name: str = typer.Option(..., help="Split name, e.g. rq3-AndroCT-holdout-2015-16."),
+    candidate: str | None = typer.Option(
+        None, help="An rq3_candidates entry (default: rq3_primary in config)."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Freeze a time window as a locked, test-only split (readable only via load_test())."""
+    cfg = _cfg(config)
+    candidate = candidate or cfg.rq3_primary
+    if candidate not in cfg.rq3_candidates:
+        raise typer.BadParameter(f"Unknown candidate '{candidate}'.")
+    split, extra, report = _build_holdout(cfg, candidate, sorted(years))
+    paths = save_split(cfg, name, split, extra)
+    _write_dedup(cfg, name, report)
+    typer.echo(
+        f"Frozen holdout '{name}' ({len(split)} apps, years {sorted(years)}) -> "
+        f"{paths.index_dir}. Locked: only load_test() can read it. Commit the index files."
+    )
+
+
 @data_app.command("rebuild")
 def rebuild(config: Path | None = ConfigOpt) -> None:
     """Rebuild data/processed on a new machine from the raw data and the frozen splits.
@@ -214,6 +267,9 @@ def rebuild(config: Path | None = ConfigOpt) -> None:
             # The configured order matters: sets are concatenated before the seeded shuffle.
             sets = cfg.rq12_splits.get(name) or list(manifest["sources"])
             split, extra, _ = _build_rq12(cfg, sets)
+        elif manifest["kind"] == "holdout":
+            years = [int(y) for y in manifest["years"]]
+            split, extra, _ = _build_holdout(cfg, manifest["candidate"], years)
         else:
             split, extra, _ = _build_rq3(cfg, manifest["candidate"])
         verify_against_index(cfg, name, split, extra["sources"])  # type: ignore[arg-type]
@@ -657,6 +713,64 @@ def analyse_rq3(config: Path | None = ConfigOpt) -> None:
     write_text(path.parent / "h3.md", text, cfg.raw_root)
     write_frame(result.comparisons, path.parent / "h3_comparisons.csv", cfg.raw_root)
     fig_mod.rq3_scatter(pool, path.parent / "rq3_mr4_vs_f1_drop.svg")
+    typer.echo(text)
+
+
+def _addendum_a(cfg: Config) -> str:
+    try:
+        return require_committed(cfg.root, phase_a.FILE)
+    except AddendumNotCommittedError as err:
+        typer.echo(str(err))
+        raise typer.Exit(code=2) from err
+
+
+@addendum_app.command("a1")
+def addendum_a1(config: Path | None = ConfigOpt) -> None:
+    """Addendum A1: why debiased training increased metadata reliance (training data only)."""
+    cfg = _cfg(config)
+    prereg = _addendum_a(cfg)
+    measures = phase_a.a1_measures(cfg)
+    text = phase_a.render_a1(
+        measures, phase_a.judge_a1(measures), phase_a.header("a1", git_commit(cfg.root), prereg)
+    )
+    folder = cfg.reports_dir / "addendum_a"
+    write_frame(measures, folder / "a1_measures.csv", cfg.raw_root)
+    write_text(folder / "a1.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@addendum_app.command("a2")
+def addendum_a2(config: Path | None = ConfigOpt) -> None:
+    """Addendum A2: violation rate vs how much metadata helps each RQ1 model (no new data)."""
+    cfg = _cfg(config)
+    prereg = _addendum_a(cfg)
+    rows = pd.read_csv(cfg.reports_dir / "rq1" / "rows.csv")
+    det = pd.read_csv(cfg.reports_dir / "rq1" / "detection.csv")
+    results = {
+        "MR4 vs F1 gain": phase_a.judge_a2(phase_a.a2_table(rows, det)),
+        "MR1 vs F1 gain": phase_a.judge_a2(phase_a.a2_table(rows, det, mr="MR1")),
+        "MR4 vs ROC-AUC gain": phase_a.judge_a2(phase_a.a2_table(rows, det, metric="roc_auc")),
+    }
+    text = phase_a.render_a2(results, phase_a.header("a2", git_commit(cfg.root), prereg))
+    folder = cfg.reports_dir / "addendum_a"
+    write_frame(phase_a.a2_table(rows, det), folder / "a2_table.csv", cfg.raw_root)
+    write_text(folder / "a2.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@addendum_app.command("a3")
+def addendum_a3(config: Path | None = ConfigOpt) -> None:
+    """Addendum A3: RQ3 pre-deployment MR4 with plain-Gower realism (validation data only)."""
+    cfg = _cfg(config)
+    prereg = _addendum_a(cfg)
+    exp = load_experiment(Path("configs/experiments/rq3.yaml"), cfg)
+    plain = phase_a.a3_rates(cfg, exp, cfg.root / "data" / "models" / exp.experiment)
+    pool = pd.read_csv(cfg.reports_dir / "rq3" / "pool.csv")
+    corr = phase_a.a3_correlations(pool, plain)
+    text = phase_a.render_a3(corr, plain, phase_a.header("a3", git_commit(cfg.root), prereg))
+    folder = cfg.reports_dir / "addendum_a"
+    write_frame(plain, folder / "a3_plain_gower.csv", cfg.raw_root)
+    write_text(folder / "a3.md", text, cfg.raw_root)
     typer.echo(text)
 
 
