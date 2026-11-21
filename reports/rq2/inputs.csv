@@ -1,0 +1,17 @@
+run,eval_split,partition,role,n_partition,n_excluded,n_inputs,n_mr_sample,mrs
+DR-AG,rq12-DR-AG_deb,test,h2-deb,249,76,173,173,MR1 MR3 MR4 MR5 MR6
+DR-AG,rq12-DR-AG,test,h2-biased,1592,74,1518,1518,MR1 MR3 MR4 MR5 MR6
+DR-AG,rq12-VS-AG,test,cross-family,20903,556,20347,5000,MR1 MR3 MR4 MR6
+DR-AG-size-matched,rq12-DR-AG_deb,test,h2-deb,249,76,173,173,MR1 MR3 MR4 MR5 MR6
+DR-AG-size-matched,rq12-DR-AG,test,h2-biased,1592,74,1518,1518,MR1 MR3 MR4 MR5 MR6
+DR-AG_deb,rq12-DR-AG_deb,test,h2-deb,249,76,173,173,MR1 MR3 MR4 MR5 MR6
+DR-AG_deb,rq12-DR-AG,test,h2-biased,1592,74,1518,1518,MR1 MR3 MR4 MR5 MR6
+DR-AG_deb,rq12-VS-AG_deb,test,cross-family,724,27,697,697,MR1 MR3 MR4 MR5 MR6
+VS-AG,rq12-VS-AG_deb,test,h2-deb,724,217,507,507,MR1 MR3 MR4 MR5 MR6
+VS-AG,rq12-VS-AG,test,h2-biased,20903,214,20689,5000,MR1 MR3 MR4 MR6
+VS-AG,rq12-DR-AG,test,cross-family,1592,566,1026,1026,MR1 MR3 MR4 MR5 MR6
+VS-AG-size-matched,rq12-VS-AG_deb,test,h2-deb,724,217,507,507,MR1 MR3 MR4 MR5 MR6
+VS-AG-size-matched,rq12-VS-AG,test,h2-biased,20903,214,20689,5000,MR1 MR3 MR4 MR6
+VS-AG_deb,rq12-VS-AG_deb,test,h2-deb,724,217,507,507,MR1 MR3 MR4 MR5 MR6
+VS-AG_deb,rq12-VS-AG,test,h2-biased,20903,214,20689,5000,MR1 MR3 MR4 MR6
+VS-AG_deb,rq12-DR-AG_deb,test,cross-family,249,41,208,208,MR1 MR3 MR4 MR5 MR6
