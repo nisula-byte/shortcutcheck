@@ -86,4 +86,17 @@ on a real access. All 10 signals for all 300 models, no missing values. Rerun ch
 recomputed in one process gave identical values. Label-free manipulation check: at skew 0.75
 both MR4 and the SHAP metadata share rise for every algorithm. Risk noted before ground truth:
 MR4 varies little among un-injected models (per-algorithm means 0.016-0.040).
+Step 3.7 (RQ3 ground truth): `make rq3-truth` at 21980c4; a dry run on validation data first
+(no test access; every F1 drop exactly 0). Real run: 300 logged load_test() calls for 300 models.
+Severe decay: F1 0.87-0.92 on 2012-14 validation to 0.17-0.47 on 2017-19 (mean drop 0.598;
+by year 2017 0.710, 2018 0.583, 2019 0.505). Higher injected skew gave slightly LESS decay.
+Step 3.8 (H3): `make rq3-analyse`, analysis code identical to the pre-registered version.
+Gate 3 outcome: NO SIGNAL. H3a fails: un-injected rho(MR4 pre-deployment, F1 drop) = 0.084
+(95% cluster-bootstrap CI -0.297 to 0.446). H3b's rule is met (MR4 - SHAP = 0.516, Holm p
+0.003) only because the SHAP share correlates negatively (-0.433); it is not evidence for MR4.
+PSI rho 0.813 beats MR4; confidence drop and ATC correlate strongly in the opposite of the
+pre-registered direction (-0.78, -0.76). Secondary, descriptive: MR4 measured on 2017-19 inputs
+(monitoring) rho 0.760 (0.572 to 0.871); MR1 pre-deployment 0.362. Not computed although listed
+as secondary in PREREGISTRATION.md: the plain-Gower realism sensitivity (to disclose).
+Roadmap decision: "No signal" -> lead with RQ2 and the tool; discuss framing with the supervisor.
 
