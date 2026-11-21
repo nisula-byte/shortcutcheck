@@ -20,6 +20,10 @@ pre-commit install
 pytest                              # roadmap 1.2 Check: green on a second machine or Colab
 ```
 
+**Requirements:** `docs/requirements.yaml` lists every functional and non-functional requirement
+with the tests or roadmap steps that verify it; `tests/test_traceability.py` fails the build if
+any link is missing.
+
 **Reproducing on another machine** (including the Gate 2 check): see
 [`docs/reproduce.md`](docs/reproduce.md). In short: `make check`, register the Dada zip,
 `make rebuild`, `make pilot`, `make pilot-compare`.
