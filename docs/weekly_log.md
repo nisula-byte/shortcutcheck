@@ -50,6 +50,14 @@ done with 61 test links, 7 planned and tied to roadmap Checks). The requirements
 docs/requirements.yaml and tests/test_traceability.py enforces that every one has an existing
 verifier (checked by breaking a link on purpose). Performance and usability targets (NFR7,
 NFR8) are set now, before Phase 4 measures them. Phase 2 complete.
+Step 3.1: one YAML config per experiment (pilot, rq1, rq2, rq3) and one shared engine; the pilot
+now runs through it. Check on real data: the pilot config run twice gave identical numbers
+(750/750 MR rows, 50/50 detection rows), equal to the committed step 2.7 results. Step 3.2:
+PREREGISTRATION.md and the analysis code for H1-H3 committed before any test partition was
+opened. H1 keeps the 5% target, adds a per-seed CI rule and 3-of-5 algorithms on both biased
+splits (the pilot would give 4 of 5 on DR-AG). H2 pairs 25 algorithm-seed pairs on identical
+inputs, with a size-matched arm (a 5-seed Wilcoxon cannot reach p < 0.05). H3 uses MR4 as its
+single primary signal; the skew injection and hyperparameter settings are now exact.
 
 ## Week 1 (w/c 23 Nov 2026)
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import mlflow
 import numpy as np
@@ -37,8 +37,23 @@ ALL_ALGORITHMS: tuple[Algorithm, ...] = ("lr", "svm", "rf", "lgbm", "mlp")
 FEATURE_SETS: tuple[FeatureSet, ...] = ("full", "behaviour")
 
 
-def build_model(algorithm: Algorithm, seed: int, n_estimators: int = 300) -> Pipeline:
-    """Fixed, untuned settings: defaults plus class balancing (and scaling where needed)."""
+def build_model(
+    algorithm: Algorithm, seed: int, n_estimators: int = 300, params: dict[str, Any] | None = None
+) -> Pipeline:
+    """Fixed, untuned settings: defaults plus class balancing (and scaling where needed).
+
+    ``params`` overrides estimator settings for the RQ3 hyperparameter settings (configured in
+    ``configs/experiments/rq3.yaml``). With no ``params`` the model is exactly the step 1.8 one.
+    An unknown parameter name raises ``ValueError``.
+    """
+    pipe = _build_default(algorithm, seed, n_estimators)
+    if params:
+        prefix = "model__estimator__" if algorithm == "svm" else "model__"
+        pipe.set_params(**{prefix + k: v for k, v in params.items()})
+    return pipe
+
+
+def _build_default(algorithm: str, seed: int, n_estimators: int) -> Pipeline:
     impute = ("impute", SimpleImputer(strategy="median", keep_empty_features=True))
     if algorithm == "svm":
         svm = LinearSVC(class_weight="balanced", random_state=seed, max_iter=5000)

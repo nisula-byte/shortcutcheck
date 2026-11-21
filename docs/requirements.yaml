@@ -179,10 +179,15 @@ functional:
   - id: FR18
     title: Run RQ1-RQ3 from one config each, with hypotheses committed before 2017-19 labels are used
     priority: must
-    status: planned
+    status: planned  # RQ1/RQ2 engine, all configs and the analysis are done; RQ3 pool in 3.5
     verified_by:
-      - roadmap:3.1
-      - roadmap:3.2
+      - test:tests/test_experiments.py::test_every_experiment_config_is_valid
+      - test:tests/test_experiments.py::test_engine_on_synthetic_data_and_identical_rerun
+      - test:tests/test_experiments.py::test_rq2_scores_paired_models_on_identical_inputs
+      - test:tests/test_analysis.py::test_preregistration_check
+      - test:tests/test_analysis.py::test_h3_maps_each_case_to_its_gate3_outcome
+      - report:PREREGISTRATION.md
+      - roadmap:3.5
 
   - id: FR19
     title: Compute label-free decay signals (MR rate, SHAP metadata share, confidence drop, PSI, ATC) that cannot receive labels
@@ -222,7 +227,9 @@ non_functional:
       - test:tests/test_dedup_splits.py::test_rq12_split_is_stratified_and_reproducible
       - test:tests/test_baselines_cli.py::test_baselines_reproducible
       - test:tests/test_runner.py::test_predictions_are_single_threaded_and_settings_restored
-      - roadmap:3.1
+      - test:tests/test_experiments.py::test_engine_on_synthetic_data_and_identical_rerun
+      - test:tests/test_analysis.py::test_reports_render_and_figures_are_byte_identical
+      - report:reports/rerun_check.md
 
   - id: NFR2
     title: Portability - runs on Linux, Windows and macOS; cross-architecture differences measured and reported
