@@ -179,7 +179,7 @@ functional:
   - id: FR18
     title: Run RQ1-RQ3 from one config each, with hypotheses committed before 2017-19 labels are used
     priority: must
-    status: planned  # judged in 3.8
+    status: done
     verified_by:
       - test:tests/test_experiments.py::test_every_experiment_config_is_valid
       - test:tests/test_experiments.py::test_engine_on_synthetic_data_and_identical_rerun
@@ -192,7 +192,7 @@ functional:
       - test:tests/test_signals.py::test_no_signal_function_takes_a_label_argument
       - test:tests/test_signals.py::test_signals_end_to_end_label_free_and_worker_independent
       - test:tests/test_ground_truth.py::test_one_load_test_per_model_and_pool_table
-      - roadmap:3.8
+      - report:reports/rq3/h3.md
 
   - id: FR19
     title: Compute label-free decay signals (MR rate, SHAP metadata share, confidence drop, PSI, ATC) that cannot receive labels
