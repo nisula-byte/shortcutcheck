@@ -1,0 +1,3 @@
+run,eval_split,partition,role,n_partition,n_excluded,n_inputs,n_mr_sample,mrs
+DR-AG,rq12-DR-AG,test,own,1592,0,1592,1592,MR1 MR3 MR4 MR5 MR6
+VS-AG,rq12-VS-AG,test,own,20903,0,20903,5000,MR1 MR3 MR4 MR6
