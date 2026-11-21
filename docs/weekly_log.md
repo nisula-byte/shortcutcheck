@@ -131,3 +131,19 @@ stable under the permission MRs that do not touch metadata (MR6 0.051 vs 0.007, 
 and their F1 is much lower (0.45 vs 0.74-0.79). So the reversal shows generally less stable
 models, not specifically more reliance on metadata. Claims must say "less robust to metadata
 perturbations", not "more shortcut reliance".
+Phase B / Addendum C (22 Nov): metamorphic augmentation fix, proof of concept, training and
+validation data only (no test access; test log still 310 lines). PREREGISTRATION-ADDENDUM-C.md
+committed (58d48e7) before the code was written; code 1fa4059; run about 5 min (120 models).
+A smoke-test dry run (DR-AG_deb, LR, seed 11) printed one model's numbers before the real run;
+the rules were already committed. Verdict by the pre-registered rule: **GO (4 of 4 splits)**.
+MR4 baseline -> augmented: DR-AG 0.110 -> 0.003; DR-AG_deb 0.234 -> 0.031; VS-AG_deb 0.147 ->
+0.021; AndroCT 2012-14 0.023 -> 0.007. F1 drop <= 0.02 everywhere, but VS-AG_deb is on the line
+(0.01998; RF and LightGBM there lose 0.03-0.05); GO still holds without it. Held-out MRs: one of
+MR1/MR3 falls significantly (Holm) in each split, not both. Reported: contrary-app accuracy rises
+in all 4 splits (+0.008 to +0.022; p < 0.01 on DR-AG and AndroCT); permission MRs MR5/MR6
+unchanged, so the fix removes metadata dependence specifically and does not fix the general
+instability of debiased models (D20). Limits: validation partitions only, 3 seeds, VS-AG
+(biased) left out; MR4 falling is partly circular. Next: confirmatory addendum (RQ4) on unseen
+data, e.g. the RQ1/RQ2 test partitions and the 2015-16 holdout (decay), before any claim.
+An untracked file src/shortcutcheck/training/augment.py (created 01:50, not by this work) was
+found in the workspace; it is not used or committed.
