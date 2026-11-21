@@ -179,7 +179,7 @@ functional:
   - id: FR18
     title: Run RQ1-RQ3 from one config each, with hypotheses committed before 2017-19 labels are used
     priority: must
-    status: planned  # RQ1/RQ2 engine, configs, analysis and the RQ3 pool done; signals in 3.6
+    status: planned  # RQ1/RQ2 engine, configs, analysis, RQ3 pool and signals done; ground truth in 3.7
     verified_by:
       - test:tests/test_experiments.py::test_every_experiment_config_is_valid
       - test:tests/test_experiments.py::test_engine_on_synthetic_data_and_identical_rerun
@@ -189,7 +189,9 @@ functional:
       - report:PREREGISTRATION.md
       - test:tests/test_pool.py::test_behaviour_only_models_cannot_enter_the_pool
       - test:tests/test_pool.py::test_pool_build_is_identical_on_rerun_and_opens_no_test_data
-      - roadmap:3.6
+      - test:tests/test_signals.py::test_no_signal_function_takes_a_label_argument
+      - test:tests/test_signals.py::test_signals_end_to_end_label_free_and_worker_independent
+      - roadmap:3.7
 
   - id: FR19
     title: Compute label-free decay signals (MR rate, SHAP metadata share, confidence drop, PSI, ATC) that cannot receive labels
