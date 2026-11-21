@@ -1,0 +1,10 @@
+run,eval_split,partition,role,n_partition,n_excluded,n_inputs,n_mr_sample,mrs
+DR-AG,dada-DR-AG_deb,test,h2-deb,40,0,40,40,MR1 MR3 MR4 MR5 MR6
+DR-AG-size-matched,dada-DR-AG_deb,test,h2-deb,40,0,40,40,MR1 MR3 MR4 MR5 MR6
+DR-AG_deb,dada-DR-AG_deb,test,h2-deb,40,0,40,40,MR1 MR3 MR4 MR5 MR6
+VS-AG,dada-VS-AG_deb,test,h2-deb,1333,0,1333,1333,MR1 MR3 MR4 MR5 MR6
+VS-AG,dada-VS-AG,test,h2-biased,6113,0,6113,5000,MR1 MR3 MR4 MR6
+VS-AG-size-matched,dada-VS-AG_deb,test,h2-deb,1333,0,1333,1333,MR1 MR3 MR4 MR5 MR6
+VS-AG-size-matched,dada-VS-AG,test,h2-biased,6113,0,6113,5000,MR1 MR3 MR4 MR6
+VS-AG_deb,dada-VS-AG_deb,test,h2-deb,1333,0,1333,1333,MR1 MR3 MR4 MR5 MR6
+VS-AG_deb,dada-VS-AG,test,h2-biased,6113,0,6113,5000,MR1 MR3 MR4 MR6
