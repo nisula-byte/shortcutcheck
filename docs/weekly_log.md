@@ -79,4 +79,11 @@ drive the increase. Dada's debiasing does not remove model-level metadata relian
 Step 3.5 (RQ3 pool): 300 full-feature models in 60 configurations built from rq3.yaml (34 min, no
 test data); every skew level has 3,286 goodware + 3,013 malware; contrary share 0.516 (skew 0) to
 0.209 (skew 0.75). Built twice: 300/300 rows identical including validation-probability hashes.
+Step 3.6 (RQ3 signals): `make rq3-signals` ran once at 48d7910 (93 min, 2 worker processes).
+prereg-check passed; the 2017-19 partition was opened once, for inputs only (labels dropped in
+code), at 09:17 UTC, after the pre-registration commit (00:05 UTC): the step 3.2 Check now holds
+on a real access. All 10 signals for all 300 models, no missing values. Rerun check: 10 models
+recomputed in one process gave identical values. Label-free manipulation check: at skew 0.75
+both MR4 and the SHAP metadata share rise for every algorithm. Risk noted before ground truth:
+MR4 varies little among un-injected models (per-algorithm means 0.016-0.040).
 
