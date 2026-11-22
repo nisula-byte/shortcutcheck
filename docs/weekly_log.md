@@ -229,3 +229,4 @@ Phase 4, steps 4.4-4.7 (22 Nov):
   response template; `shortcutcheck expert-eval` analysis with tests. Sessions wait for ethics
   approval of the protocol and consent form (roadmap 4.6 Check).
 - 4.7: version 1.0.0, CHANGELOG.md, docs/release.md; the v1.0 tag goes on main after the merge.
+- 4.4 coverage measured locally after the lazy-import fix: 84.26% with --cov-fail-under=80, full suite green (GitHub Actions unavailable).
