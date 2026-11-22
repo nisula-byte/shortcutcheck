@@ -235,3 +235,7 @@ src/shortcutcheck/report/    Markdown tables of MR runs
 tests/                       pytest suite, runs on synthetic Dada-like data
 docs/weekly_log.md           rule 6
 ```
+
+## License
+
+The code is released under the MIT License (see `LICENSE`). The Dada data are not redistributed here; they are available from IEEE DataPort under CC BY 4.0.

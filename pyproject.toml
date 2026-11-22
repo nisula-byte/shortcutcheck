@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "Label-free metamorphic testing for shortcut learning in Android malware detectors"
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
+license = { file = "LICENSE" }
 
 [project.scripts]
 shortcutcheck = "shortcutcheck.cli:app"
