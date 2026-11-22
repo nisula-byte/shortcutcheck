@@ -1,6 +1,6 @@
 """ShortcutCheck: label-free metamorphic testing for shortcut learning in malware detectors."""
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 
 def dashboard_app_path() -> str:

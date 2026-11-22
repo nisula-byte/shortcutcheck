@@ -217,3 +217,15 @@ with Wilson intervals and the threshold, MR4 per metadata field, and a drill-dow
 to flipped apps to the fields that changed. It reads only JSON reports from the CLI or the pytest
 plugin; Check passed with tests that open reports written by the real CLI (tests/test_dashboard.py,
 5 tests, Streamlit AppTest). FR22 marked done.
+Phase 4, steps 4.4-4.7 (22 Nov):
+- 4.4: coverage was undercounted (73%) because the pytest plugin imported the package before
+  pytest-cov started; the plugin now imports lazily. CI now enforces --cov-fail-under=80. README
+  has a 5-minute quick-start on the synthetic CI demo. GitHub Actions did not run the last push:
+  the account's Actions spending limit or payment needs attention (Billing & plans).
+- 4.5: scripts/nfr_benchmark.py (3 repeats, fresh process each): DR-AG training (7,424 apps)
+  8.0 s and 816 MB for 10,000 apps (NFR7 met); VS-AG training (97,545 apps) 160 s and 1,995 MB
+  (time NOT met; realism search dominates). NFR7 stays planned (reports/nfr/benchmark.md).
+- 4.6: docs/evaluation/ protocol, information sheet, consent form, session guide, questionnaire,
+  response template; `shortcutcheck expert-eval` analysis with tests. Sessions wait for ethics
+  approval of the protocol and consent form (roadmap 4.6 Check).
+- 4.7: version 1.0.0, CHANGELOG.md, docs/release.md; the v1.0 tag goes on main after the merge.

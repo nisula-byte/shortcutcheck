@@ -290,6 +290,7 @@ non_functional:
     status: planned
     verified_by:
       - roadmap:4.5
+      - report:reports/nfr/benchmark.md
 
   - id: NFR8
     title: Usability - a new user completes the quick-start unaided in at most 5 minutes; practitioners' median usefulness rating at least 4 of 5
