@@ -1162,6 +1162,23 @@ def dashboard_cmd(
     raise typer.Exit(code=subprocess.call([*cmd, "--", str(report)]))
 
 
+@app.command("expert-eval")
+def expert_eval_cmd(
+    responses: Path = typer.Argument(
+        Path("docs/evaluation/responses.csv"), exists=True, dir_okay=False
+    ),
+    out: Path = typer.Option(Path("reports/expert_eval/results.md")),
+) -> None:
+    """Step 4.6: analyse the expert questionnaire (medians per construct, NFR8)."""
+    from shortcutcheck import expert_eval
+
+    result = expert_eval.analyse(pd.read_csv(responses))
+    text = expert_eval.render(result)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
+    typer.echo(text)
+
+
 @app.command("prereg-check")
 def prereg_check(config: Path | None = ConfigOpt) -> None:
     """Step 3.2 Check: PREREGISTRATION.md was committed before any test access."""

@@ -30,4 +30,4 @@ jobs:
       - name: Type-check
         run: mypy
       - name: Test
-        run: pytest --cov=shortcutcheck --cov-report=term-missing
+        run: pytest --cov=shortcutcheck --cov-report=term-missing --cov-fail-under=80

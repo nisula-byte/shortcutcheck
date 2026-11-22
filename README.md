@@ -5,8 +5,33 @@ Android malware detectors. Final-year project, Software Engineering (IIT / Unive
 Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.org/10.21227/0frv-zb46)
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
-Current state: **Phases 1–3 and addenda A–E done; Phase 4 (the tool) in progress.** The release
-gate (`shortcutcheck run`, step 4.1) is in place; the pytest plugin and dashboard come next.
+Current state: **Phases 1–3, addenda A–F and the Phase 4 tool are done**: release gate
+(`shortcutcheck run`), pytest plugin with a CI demo, and dashboard. The expert evaluation (4.6)
+awaits ethics approval.
+
+## 5-minute quick start
+
+Needs Python 3.11 and git. No Dada download is needed: the demo uses synthetic data.
+
+```bash
+git clone https://github.com/nisula-byte/shortcutcheck.git && cd shortcutcheck
+python3.11 -m venv .venv
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e . --no-deps
+
+cd examples/ci-demo
+python make_demo.py                    # synthetic data plus two detectors
+shortcutcheck run models/robust.joblib data/apps.csv --train data/train.csv
+#   -> PASS (exit code 0)
+shortcutcheck run models/shortcut.joblib data/apps.csv --train data/train.csv --report shortcut.json
+#   -> FAIL for MR1 and MR4: the model relies on build year (exit code 1)
+shortcutcheck dashboard shortcut.json  # opens the report in your browser (Ctrl+C to stop)
+DEMO_MODEL=shortcut pytest             # the same gate as a failing test (pytest plugin)
+```
+
+On Windows, set the variable with `set DEMO_MODEL=shortcut` (cmd) or
+`$env:DEMO_MODEL="shortcut"` (PowerShell) before `pytest`.
 
 ## Check a model (the release gate)
 
@@ -28,7 +53,19 @@ metadata field, which shows *which* field the model leans on. Exit code **0** = 
 **1** = a relation's violation rate exceeds the threshold, **2** = bad input. `--report` writes a JSON
 report (rates, flipped example apps, per-field rates) for the dashboard.
 
-## Quick start
+**In a test suite** (pytest plugin, installed with the package):
+
+```python
+@pytest.mark.shortcutcheck(model="models/detector.joblib", data="data/apps.csv",
+                           train="data/train.csv", mrs="core", threshold=0.05)
+def test_detector_has_no_metadata_shortcuts(shortcutcheck_report):
+    shortcutcheck_report.assert_passed()
+```
+
+**In CI:** see [`examples/ci-demo`](examples/ci-demo) and the workflow template
+`examples/ci-demo/github-workflow-example.yml`. **Dashboard:** `shortcutcheck dashboard report.json`.
+
+## Developer setup
 
 ```bash
 python3.11 -m venv .venv

@@ -36,19 +36,19 @@ def project(pytester: pytest.Pytester) -> pytest.Pytester:
 
 def test_marker_passes_a_robust_model(project: pytest.Pytester) -> None:
     project.makepyfile(TEST_FILE.format(model="good"))
-    project.runpytest("-p", "no:cacheprovider").assert_outcomes(passed=1)
+    project.runpytest_subprocess("-p", "no:cacheprovider").assert_outcomes(passed=1)
 
 
 def test_marker_fails_a_shortcut_prone_model(project: pytest.Pytester) -> None:
     project.makepyfile(TEST_FILE.format(model="bad"))
-    result = project.runpytest("-p", "no:cacheprovider")
+    result = project.runpytest_subprocess("-p", "no:cacheprovider")
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*ShortcutCheck gate failed for*MR4*"])
 
 
 def test_reports_option_writes_json(project: pytest.Pytester) -> None:
     project.makepyfile(TEST_FILE.format(model="bad"))
-    project.runpytest("-p", "no:cacheprovider", "--shortcutcheck-reports", "out")
+    project.runpytest_subprocess("-p", "no:cacheprovider", "--shortcutcheck-reports", "out")
     files = list((project.path / "out").glob("*.json"))
     assert len(files) == 1
     assert json.loads(files[0].read_text())["passed"] is False
@@ -62,7 +62,7 @@ def test_fixture_can_be_called_directly(project: pytest.Pytester) -> None:
             assert result.passed
             assert [r.mr for r in result.report.mrs] == ["MR4"]
         """)
-    project.runpytest("-p", "no:cacheprovider").assert_outcomes(passed=1)
+    project.runpytest_subprocess("-p", "no:cacheprovider").assert_outcomes(passed=1)
 
 
 def test_marker_without_paths_is_a_usage_error(project: pytest.Pytester) -> None:
@@ -73,7 +73,7 @@ def test_marker_without_paths_is_a_usage_error(project: pytest.Pytester) -> None
         def test_gate(shortcutcheck_report):
             pass
         """)
-    result = project.runpytest("-p", "no:cacheprovider")
+    result = project.runpytest_subprocess("-p", "no:cacheprovider")
     assert result.ret != 0
     result.stdout.fnmatch_lines(["*missing*data*train*"])
 
@@ -83,9 +83,9 @@ def test_unknown_option_is_rejected(project: pytest.Pytester) -> None:
         def test_direct(shortcutcheck):
             shortcutcheck("good.joblib", "apps.csv", "train.csv", treshold=0.1)
         """)
-    project.runpytest("-p", "no:cacheprovider").assert_outcomes(failed=1)
+    project.runpytest_subprocess("-p", "no:cacheprovider").assert_outcomes(failed=1)
 
 
 def test_marker_is_registered(project: pytest.Pytester) -> None:
-    result = project.runpytest("--markers")
+    result = project.runpytest_subprocess("--markers")
     result.stdout.fnmatch_lines(["*@pytest.mark.shortcutcheck(model, data, train*"])

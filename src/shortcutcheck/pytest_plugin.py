@@ -23,11 +23,12 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from shortcutcheck import gate
+if TYPE_CHECKING:  # imported lazily below, so loading the plugin does not import the package
+    from shortcutcheck.gate import GateReport
 
 MARKER = "shortcutcheck"
 _OPTIONS = ("mrs", "threshold", "sample", "seed", "realism")
@@ -40,7 +41,7 @@ class ShortcutCheckFailed(AssertionError):
 class GateResult:
     """A gate report bound to a helpful assertion."""
 
-    def __init__(self, report: gate.GateReport) -> None:
+    def __init__(self, report: GateReport) -> None:
         self.report = report
 
     @property
@@ -86,6 +87,8 @@ def pytest_configure(config: pytest.Config) -> None:
 def _run(
     config: pytest.Config, name: str, model: str, data: str, train: str, **kw: Any
 ) -> GateResult:
+    from shortcutcheck import gate
+
     root = Path(str(config.rootpath))
     cfg_path = config.getoption("--shortcutcheck-config")
     settings = gate.resolve_settings(Path(cfg_path) if cfg_path else None)
