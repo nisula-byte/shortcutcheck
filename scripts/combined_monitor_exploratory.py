@@ -10,13 +10,17 @@ Writes reports/exploratory/combined_monitor.md and .csv.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import pandas as pd
 
 from shortcutcheck.addenda.addendum_e import adjusted_bootstrap, adjusted_rho
 from shortcutcheck.analysis.stats import cluster_bootstrap_rhos, percentile_ci, spearman
+from shortcutcheck.config import load_config
+from shortcutcheck.training.baselines import _setup_mlflow
 
 RESAMPLES = 2000
 SEED = 11
@@ -35,10 +39,11 @@ def load() -> dict[str, pd.DataFrame]:
     azl = pd.read_csv("reports/addendum_e/e_pool.csv")
     azl["configuration"] = azl["algorithm"].astype(str) + ":" + azl["setting"].astype(str)
     tables = {"AndroCT 2015-16": androct, "AZL 2015-16": azl}
-    for t in tables.values():
-        t.dropna(subset=["mr4_monitor", "psi", "decay"], inplace=True)
+    for name, t in tables.items():
+        t = t.dropna(subset=["mr4_monitor", "psi", "decay"]).copy()
         t["combined"] = combined(t)
         t["_cluster"] = t["configuration"]
+        tables[name] = t
     return tables
 
 
@@ -89,6 +94,18 @@ def main() -> None:
             f"[{r['rho_low']:.3f}, {r['rho_high']:.3f}] | {r['adj_rho']:.3f} | "
             f"[{r['adj_low']:.3f}, {r['adj_high']:.3f}] |"
         )
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    _setup_mlflow(load_config(), "exploratory-combined-monitor")
+    with mlflow.start_run(run_name="combined-mr4-psi") as run:
+        mlflow.set_tags({"git_commit": commit, "status": "exploratory"})
+        mlflow.log_params({"resamples": RESAMPLES, "seed": SEED, "combined": "mean rank"})
+        for r in rows:
+            key = f"{str(r['dataset']).split()[0]}_{r['signal']}"
+            mlflow.log_metrics({f"{key}_rho": float(r["rho"]), f"{key}_adj_rho": float(r["adj_rho"])})
+        run_id = run.info.run_id
+    lines += ["", f"Script commit {commit}; MLflow run {run_id}."]
     (OUT / "combined_monitor.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
