@@ -181,3 +181,18 @@ Verdict by the pre-registered rule: **PARTIALLY REPLICATES**.
 - E5: fix vs behaviour-only: no difference in holdout F1 (0.644 vs 0.650) or decay (0.105 vs
   0.102); same on AndroCT (secondary). Dropping metadata is as good as the fix for accuracy and
   decay. The fix's benefit again comes from LR, SVM and MLP; RF and LightGBM decay slightly more.
+Addendum F (22 Nov): mechanism of the fix, training and validation data only (no test access;
+log still 319). PREREGISTRATION-ADDENDUM-F.md and code committed (3d81681) before anything was
+computed; dry run 9 s; run about 10 min (300 models). Verdict by the pre-registered rule:
+**mechanism NOT SUPPORTED**.
+- F1 DOES NOT HOLD: metadata-only CV ROC-AUC after augmentation 0.618 (DR-AG) and 0.683
+  (DR-AG_deb), above the 0.60 rule; on AndroCT and AZL it falls below 0.5 (0.437, 0.423), i.e.
+  the realism filter makes the symmetrisation inexact and can reverse the association.
+- F2 and F3 NOT TESTABLE (only 2 splits informative: in-distribution metadata reliance on
+  AndroCT and AZL is below 0.005 for linear models). Where testable, linear reliance halves (F2
+  pattern) but trees lose MORE reliance than linear models (0.93 vs 0.63), the opposite of F3.
+- F4 DOES NOT HOLD (2 of 4 splits).
+So the proposed explanation (fix ~ dropping metadata for linear models only) is not supported.
+Note for discussion (not tested): in-distribution reliance is tiny on the decay datasets, so the
+fix's decay benefit for linear models may come from how metadata (year) extrapolate beyond the
+training range rather than from in-distribution reliance; future work.
