@@ -12,6 +12,9 @@ readme = "README.md"
 [project.scripts]
 shortcutcheck = "shortcutcheck.cli:app"
 
+[project.entry-points.pytest11]
+shortcutcheck = "shortcutcheck.pytest_plugin"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

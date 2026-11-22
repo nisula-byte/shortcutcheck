@@ -14,13 +14,13 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 import joblib
 import numpy as np
 import pandas as pd
 
-from shortcutcheck.config import Config
+from shortcutcheck.config import Config, load_config
 from shortcutcheck.data.dada import LABEL
 from shortcutcheck.evaluation.experiment import fit_mrs
 from shortcutcheck.mrs.base import MetamorphicRelation
@@ -44,6 +44,68 @@ MR_NAMES = {
     "MR5": "one normal permission added (malware must stay malware)",
     "MR6": "one dangerous permission added (malware must stay malware)",
 }
+
+
+class Settings(Protocol):
+    """What the gate needs to know about the feature table (a project Config satisfies it)."""
+
+    @property
+    def metadata_columns(self) -> list[str]: ...
+    @property
+    def id_column(self) -> str: ...
+    @property
+    def dropped_features(self) -> list[str]: ...
+    @property
+    def android_first_year(self) -> int: ...
+    @property
+    def collection_year(self) -> int: ...
+
+
+@dataclass(frozen=True)
+class GateSettings:
+    """Built-in defaults for Dada-format feature tables, used when no project config exists."""
+
+    metadata_columns: list[str] = field(
+        default_factory=lambda: [
+            "apk_size",
+            "APK size",
+            "dex_date",
+            "year",
+            "Year",
+            "minSdkVersion",
+            "targetSdkVersion",
+        ]
+    )
+    id_column: str = "sha256"
+    dropped_features: list[str] = field(
+        default_factory=lambda: [
+            "dex_date",
+            "APK size",
+            "Year",
+            "Internet Permission",
+            "External storage",
+            "Uses Play Services",
+            "Generates UUIDs",
+            "Vibrate phone",
+            "NFC",
+            "Bluetooth",
+            "Uses HTTP",
+            "Uses JSON",
+            "Specify User-Agent",
+        ]
+    )
+    android_first_year: int = 2008
+    collection_year: int = 2021
+
+
+def resolve_settings(config: Path | None = None) -> Settings:
+    """The given project config, else this project's config if found, else built-in defaults."""
+    if config is not None:
+        return load_config(config)
+    try:
+        return load_config()
+    except (FileNotFoundError, RuntimeError, OSError, KeyError):
+        return GateSettings()
 
 
 class GateError(ValueError):
@@ -71,7 +133,7 @@ def parse_mrs(spec: str) -> tuple[str, ...]:
     return wanted
 
 
-def features(frame: pd.DataFrame, cfg: Config) -> pd.DataFrame:
+def features(frame: pd.DataFrame, cfg: Settings) -> pd.DataFrame:
     """Numeric model features of a Dada-style table (labels and dropped columns removed)."""
     x = numeric_features(frame.drop(columns=[LABEL], errors="ignore"), cfg.id_column)
     return x.drop(columns=[c for c in cfg.dropped_features if c in x.columns])
@@ -331,7 +393,7 @@ def check(
     x_train: pd.DataFrame,
     y_train: pd.Series,
     x_data: pd.DataFrame,
-    cfg: Config,
+    cfg: Settings,
     *,
     mrs: tuple[str, ...] = CORE,
     threshold: float = DEFAULT_THRESHOLD,
@@ -355,7 +417,8 @@ def check(
     )
     meta = [c for c in cfg.metadata_columns if c in x_train.columns]
     check_real = RealismCheck(seed=seed, metadata_columns=meta).fit(x_train) if realism else None
-    fitted = {m.mr_id: m for m in fit_mrs(cfg, x_train, y_train, mrs)}
+    # fit_mrs reads only the Settings fields of a Config.
+    fitted = {m.mr_id: m for m in fit_mrs(cast(Config, cfg), x_train, y_train, mrs)}
     results, examples = [], []
     for mr_id in mrs:
         if mr_id not in fitted:
@@ -405,7 +468,7 @@ def check_files(
     model_path: Path,
     data_path: Path,
     train_path: Path,
-    cfg: Config,
+    cfg: Settings,
     **kwargs: Any,
 ) -> GateReport:
     """``check`` on files: a joblib model, an input CSV and the labelled training CSV."""

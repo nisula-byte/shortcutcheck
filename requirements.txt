@@ -9,3 +9,5 @@ typer==0.29.2
 pyyaml==6.0.3
 # RQ3 Revision v2 baseline (SHAP metadata share); keep pinned even before approval.
 shap==0.51.0
+# Phase 4 dashboard (step 4.3).
+streamlit==1.67.0

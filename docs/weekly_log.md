@@ -203,3 +203,11 @@ Wilson interval, flipped example apps, and MR4 per metadata field. Check passed:
 (predicts from metadata) fails with exit 1 and a known-good model (behaviour only) passes with
 exit 0 (tests/test_gate.py, 11 tests). Smoke run on DR-AG validation data (no test access): a
 LightGBM model fails (MR1 0.287, MR4 0.288; year alone 0.351) in about 5 s. FR20 marked done.
+Phase 4, step 4.2 (22 Nov): pytest plugin (src/shortcutcheck/pytest_plugin.py, entry point
+pytest11): `@pytest.mark.shortcutcheck(model=..., data=..., train=...)` with the
+`shortcutcheck_report` fixture, a direct `shortcutcheck(...)` fixture, and
+`--shortcutcheck-reports DIR`. The gate now falls back to built-in Dada defaults when a project
+has no configs/phase1.yaml (GateSettings). CI demo in examples/ci-demo (synthetic data; robust
+behaviour-only model passes, shortcut-prone LightGBM fails MR1 0.255, MR4 1.000) and workflow
+.github/workflows/gate-demo.yml; template for adopters in examples/ci-demo/github-workflow-example.yml.
+7 plugin tests. Streamlit 1.67.0 pinned in requirements.txt for step 4.3. FR21 marked done.

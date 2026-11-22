@@ -1113,7 +1113,7 @@ def run_gate(
     config: Path | None = ConfigOpt,
 ) -> None:
     """Step 4.1: metamorphic gate. Exit code 0 = pass, 1 = a relation exceeds the threshold."""
-    cfg = _cfg(config)
+    cfg = gate_mod.resolve_settings(config)
     try:
         result = gate_mod.check_files(
             model,

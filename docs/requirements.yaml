@@ -214,9 +214,12 @@ functional:
   - id: FR21
     title: pytest plugin and GitHub Actions workflow that block a merge when the gate fails
     priority: should
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.2
+      - test:tests/test_pytest_plugin.py::test_marker_fails_a_shortcut_prone_model
+      - test:tests/test_pytest_plugin.py::test_marker_passes_a_robust_model
+      - ci:.github/workflows/gate-demo.yml
 
   - id: FR22
     title: Dashboard of violation rates per MR and feature, loading results produced by the CLI
