@@ -72,6 +72,13 @@ rq3_candidates:
     early_years: [2013, 2014]
     late_years: [2017, 2018]
 
+  AZL-2012-14-vs-2017-19:          # Addendum E replication pool; shares no app with AndroCT
+    goodware: AZL-G
+    malware: AZL-M
+    early_years: [2012, 2013, 2014]
+    late_years: [2017, 2018, 2019]
+    exclude_pools_of: [AndroCT-2012-14-vs-2017-19]
+
 # RQ3 design (decision log D1): the candidate used for the frozen RQ3 split.
 rq3_primary: AndroCT-2012-14-vs-2017-19
 
