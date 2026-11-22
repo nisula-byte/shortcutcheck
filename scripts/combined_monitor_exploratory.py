@@ -103,7 +103,9 @@ def main() -> None:
         mlflow.log_params({"resamples": RESAMPLES, "seed": SEED, "combined": "mean rank"})
         for r in rows:
             key = f"{str(r['dataset']).split()[0]}_{r['signal']}"
-            mlflow.log_metrics({f"{key}_rho": float(r["rho"]), f"{key}_adj_rho": float(r["adj_rho"])})
+            mlflow.log_metrics(
+                {f"{key}_rho": float(r["rho"]), f"{key}_adj_rho": float(r["adj_rho"])}
+            )
         run_id = run.info.run_id
     lines += ["", f"Script commit {commit}; MLflow run {run_id}."]
     (OUT / "combined_monitor.md").write_text("\n".join(lines) + "\n")
