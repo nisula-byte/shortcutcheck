@@ -19,6 +19,7 @@ from shortcutcheck.addenda import (
     addendum_d,
     addendum_e,
     fix_poc,
+    mechanism,
     phase_a,
     phase_b,
     require_committed,
@@ -1048,6 +1049,40 @@ def addendum_e_cmd(
         arms, pool, result, addendum_e.header(commit, prereg), androct=adj, androct_e5=e5_d
     )
     write_text(folder / "addendum_e.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@addendum_app.command("f")
+def addendum_f_cmd(
+    analyse_only: bool = typer.Option(False, help="Only re-analyse the saved tables."),
+    dry_run: bool = typer.Option(
+        False, help="One split, LR and RF, seed 11, into a scratch folder; not a result."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Addendum F: mechanism of the fix (training and validation data only)."""
+    cfg = _cfg(config)
+    try:
+        prereg = require_committed(cfg.root, mechanism.FILE)
+    except AddendumNotCommittedError as err:
+        typer.echo(str(err))
+        raise typer.Exit(code=2) from err
+    folder = cfg.reports_dir / ("addendum_f_dry_run" if dry_run else "addendum_f")
+    commit = git_commit(cfg.root)
+    if not analyse_only:
+        small: dict[str, object] = (
+            {"splits": ("rq12-DR-AG_deb",), "algorithms": ("lr", "rf"), "seeds": (11,)}
+            if dry_run
+            else {}
+        )
+        rows, sep = mechanism.run(cfg, progress=lambda m: typer.echo(m, err=True), **small)  # type: ignore[arg-type]
+        write_frame(rows, folder / "f_rows.csv", cfg.raw_root)
+        write_frame(sep, folder / "f_separability.csv", cfg.raw_root)
+    rows = pd.read_csv(folder / "f_rows.csv")
+    sep = pd.read_csv(folder / "f_separability.csv")
+    result = mechanism.judge(rows, sep)
+    text = mechanism.render(rows, sep, result, mechanism.header(commit, prereg))
+    write_text(folder / "addendum_f.md", text, cfg.raw_root)
     typer.echo(text)
 
 
