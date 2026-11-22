@@ -17,7 +17,7 @@ Needs Python 3.11 and git. No Dada download is needed: the demo uses synthetic d
 git clone https://github.com/nisula-byte/shortcutcheck.git && cd shortcutcheck
 python3.11 -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt pytest
 pip install -e . --no-deps
 
 cd examples/ci-demo
