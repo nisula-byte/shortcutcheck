@@ -211,3 +211,9 @@ has no configs/phase1.yaml (GateSettings). CI demo in examples/ci-demo (syntheti
 behaviour-only model passes, shortcut-prone LightGBM fails MR1 0.255, MR4 1.000) and workflow
 .github/workflows/gate-demo.yml; template for adopters in examples/ci-demo/github-workflow-example.yml.
 7 plugin tests. Streamlit 1.67.0 pinned in requirements.txt for step 4.3. FR21 marked done.
+Phase 4, step 4.3 (22 Nov): Streamlit dashboard (src/shortcutcheck/dashboard.py, entry script
+dashboard_app.py; `shortcutcheck dashboard report.json`). Shows the verdict, rate per relation
+with Wilson intervals and the threshold, MR4 per metadata field, and a drill-down from relation
+to flipped apps to the fields that changed. It reads only JSON reports from the CLI or the pytest
+plugin; Check passed with tests that open reports written by the real CLI (tests/test_dashboard.py,
+5 tests, Streamlit AppTest). FR22 marked done.

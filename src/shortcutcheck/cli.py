@@ -1137,6 +1137,31 @@ def run_gate(
         raise typer.Exit(code=1)
 
 
+@app.command("dashboard")
+def dashboard_cmd(
+    report: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="JSON report from `shortcutcheck run --report`."
+    ),
+    port: int = typer.Option(8501, help="Port for the local Streamlit server."),
+) -> None:
+    """Step 4.3: open a gate report in the Streamlit dashboard."""
+    import subprocess
+    import sys
+
+    from shortcutcheck import dashboard_app_path
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        dashboard_app_path(),
+        "--server.port",
+        str(port),
+    ]
+    raise typer.Exit(code=subprocess.call([*cmd, "--", str(report)]))
+
+
 @app.command("prereg-check")
 def prereg_check(config: Path | None = ConfigOpt) -> None:
     """Step 3.2 Check: PREREGISTRATION.md was committed before any test access."""

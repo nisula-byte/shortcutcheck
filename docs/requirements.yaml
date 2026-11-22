@@ -224,9 +224,11 @@ functional:
   - id: FR22
     title: Dashboard of violation rates per MR and feature, loading results produced by the CLI
     priority: should
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.3
+      - test:tests/test_dashboard.py::test_failing_report_shows_fail_and_drill_down
+      - test:tests/test_dashboard.py::test_passing_report_shows_pass
 
 non_functional:
   - id: NFR1
