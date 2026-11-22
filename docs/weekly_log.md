@@ -168,3 +168,16 @@ algorithms; after removing algorithm means rho is 0.521 (un-injected) / 0.727 (f
 above every baseline (PSI 0.153 / 0.044); within each algorithm rho is positive (0.18 to 0.83).
 Confidence drop's |rho| is 0.668 but in the opposite direction to its pre-registered
 orientation. The fix raised MR5 flips on VS-AG_deb (0.259 -> 0.321).
+Addendum E (22 Nov): replication on AZL (Dada's AndroZoo sample, 99 AndroCT apps removed).
+PREREGISTRATION-ADDENDUM-E.md, frozen AZL splits and code committed together (461cc75) before
+any AZL test data were opened; dry run 36 s, no test access. Run about 9 min after Nisula's go;
+AZL 2015-16 and AZL 2017-19 opened once each, AndroCT 2015-16 once more (secondary); log 319.
+Verdict by the pre-registered rule: **PARTIALLY REPLICATES**.
+- E1 HOLDS: decay to 2015-16 baseline 0.121 vs fixed 0.105 (p 0.013); 2017-19 0.398 vs 0.308.
+- E2 DOES NOT HOLD: rho(MR4 monitoring, decay) 0.479 (CI 0.109 to 0.750), below the 0.5 rule.
+- E3 HOLDS: algorithm-adjusted rho 0.564 (0.279 to 0.748); AndroCT re-analysis 0.579 (0.322 to
+  0.767, secondary).
+- E4: beats confidence drop and ATC, not PSI (PSI 0.652 on AZL).
+- E5: fix vs behaviour-only: no difference in holdout F1 (0.644 vs 0.650) or decay (0.105 vs
+  0.102); same on AndroCT (secondary). Dropping metadata is as good as the fix for accuracy and
+  decay. The fix's benefit again comes from LR, SVM and MLP; RF and LightGBM decay slightly more.
