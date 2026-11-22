@@ -8,6 +8,7 @@ import json
 import subprocess
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import typer
@@ -16,6 +17,7 @@ from shortcutcheck import pilot as pilot_mod
 from shortcutcheck.addenda import (
     AddendumNotCommittedError,
     addendum_d,
+    addendum_e,
     fix_poc,
     phase_a,
     phase_b,
@@ -42,6 +44,7 @@ from shortcutcheck.data.splits import (
 )
 from shortcutcheck.data.validity import check_dex_date, decision
 from shortcutcheck.evaluation import addendum_d_run as d_run
+from shortcutcheck.evaluation import addendum_e_run as e_run
 from shortcutcheck.evaluation import experiment as engine_mod
 from shortcutcheck.evaluation import rq3_ground_truth as rq3_truth
 from shortcutcheck.evaluation import rq3_signals as rq3_sig
@@ -180,11 +183,30 @@ def _build_rq12(
     return split, extra, report
 
 
+def _exclude_other_pools(
+    cfg: Config, cand: dict[str, Any], clean: pd.DataFrame
+) -> tuple[pd.DataFrame, int]:
+    """Drop apps that occur (any year) in the pools of the candidates named in
+    ``exclude_pools_of``, so a replication shares no app with them (Addendum E)."""
+    others: list[str] = list(cand.get("exclude_pools_of") or [])
+    if not others:
+        return clean, 0
+    seen: set[str] = set()
+    for other in others:
+        pool, _ = audit_mod.candidate_pool(
+            _sets(cfg), cfg.rq3_candidates[str(other)], cfg.id_column, dedup=False
+        )
+        seen |= set(pool[cfg.id_column])
+    drop = clean[cfg.id_column].isin(seen)
+    return clean[~drop].reset_index(drop=True), int(drop.sum())
+
+
 def _build_rq3(cfg: Config, candidate: str) -> tuple[pd.DataFrame, dict[str, object], DedupReport]:
     """The RQ3 split, computed deterministically (step 1.7). Used by split and rebuild."""
     cand = cfg.rq3_candidates[candidate]
     raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
     clean, report = deduplicate(raw_pool, cfg.id_column)
+    clean, excluded = _exclude_other_pools(cfg, cand, clean)
     first, last = cfg.android_first_year, cfg.collection_year
     early_years = [int(y) for y in cand["early_years"]]
     late_years = [int(y) for y in cand["late_years"]]
@@ -204,6 +226,9 @@ def _build_rq3(cfg: Config, candidate: str) -> tuple[pd.DataFrame, dict[str, obj
         "late_removed_for_hash_overlap": overlap,
         "dedup": asdict(report),
     }
+    if cand.get("exclude_pools_of"):
+        extra["excluded_pools_of"] = list(cand["exclude_pools_of"])
+        extra["removed_for_overlap_with_excluded_pools"] = excluded
     return split, extra, report
 
 
@@ -218,6 +243,7 @@ def _build_holdout(
     cand = cfg.rq3_candidates[candidate]
     raw_pool, sources = audit_mod.candidate_pool(_sets(cfg), cand, cfg.id_column, dedup=False)
     clean, report = deduplicate(raw_pool, cfg.id_column)
+    clean, excluded = _exclude_other_pools(cfg, cand, clean)
     held = audit_mod.window(clean, years, cfg.android_first_year, cfg.collection_year)
     used, _, _ = _build_rq3(cfg, candidate)
     overlap = held[cfg.id_column].isin(set(used[cfg.id_column]))
@@ -230,6 +256,9 @@ def _build_holdout(
         "removed_for_overlap_with_rq3_split": int(overlap.sum()),
         "dedup": asdict(report),
     }
+    if cand.get("exclude_pools_of"):
+        extra["excluded_pools_of"] = list(cand["exclude_pools_of"])
+        extra["removed_for_overlap_with_excluded_pools"] = excluded
     return split, extra, report
 
 
@@ -969,6 +998,57 @@ def addendum_d_cmd(
         text = addendum_d.render_h5(h5a, ra, rb, addendum_d.header("--part h5", commit, prereg))
         write_text(folder / "h5.md", text, cfg.raw_root)
         typer.echo(text)
+
+
+@addendum_app.command("e")
+def addendum_e_cmd(
+    analyse_only: bool = typer.Option(False, help="Only re-analyse the saved tables."),
+    dry_run: bool = typer.Option(
+        False,
+        help="Same layout on the AZL validation partition, LR and RF, seed 11, 2 settings; "
+        "no test access; not a result.",
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Addendum E: replication on AZL, algorithm-adjusted H5b, fix vs behaviour-only."""
+    cfg = _cfg(config)
+    try:
+        prereg = require_committed(cfg.root, addendum_e.FILE)
+    except AddendumNotCommittedError as err:
+        typer.echo(str(err))
+        raise typer.Exit(code=2) from err
+    folder = cfg.reports_dir / ("addendum_e_dry_run" if dry_run else "addendum_e")
+    commit = git_commit(cfg.root)
+    if not analyse_only:
+        small: dict[str, object] = (
+            {"algorithms": ("lr", "rf"), "seeds": (11,), "settings": 2} if dry_run else {}
+        )
+        arms, pool, androct = e_run.run_e(
+            cfg, commit, dry_run=dry_run, progress=lambda m: typer.echo(m, err=True), **small  # type: ignore[arg-type]
+        )
+        write_frame(arms, folder / "e_arms.csv", cfg.raw_root)
+        write_frame(pool, folder / "e_pool.csv", cfg.raw_root)
+        write_frame(androct, folder / "e_androct_behaviour.csv", cfg.raw_root)
+    arms = pd.read_csv(folder / "e_arms.csv")
+    pool = pd.read_csv(folder / "e_pool.csv")
+    androct = pd.read_csv(folder / "e_androct_behaviour.csv")
+    result = addendum_e.judge(arms, pool)
+    d_table = cfg.reports_dir / "addendum_d" / "h5b_pool.csv"
+    adj = None
+    if d_table.exists():
+        t = pd.read_csv(d_table)
+        adj = addendum_e.judge_adjusted(t[t["skew"] == 0], "AndroCT un-injected (addendum D)")
+    e5_d = None
+    d_rows = cfg.reports_dir / "addendum_d" / "h5a_rows.csv"
+    if len(androct) and d_rows.exists():
+        e5_d = addendum_e.judge_e5(e_run.androct_e5_rows(pd.read_csv(d_rows), androct))
+    write_frame(result.e5, folder / "e5_tests.csv", cfg.raw_root)
+    write_frame(result.e2.comparisons, folder / "e4_comparisons.csv", cfg.raw_root)
+    text = addendum_e.render(
+        arms, pool, result, addendum_e.header(commit, prereg), androct=adj, androct_e5=e5_d
+    )
+    write_text(folder / "addendum_e.md", text, cfg.raw_root)
+    typer.echo(text)
 
 
 @app.command("prereg-check")
