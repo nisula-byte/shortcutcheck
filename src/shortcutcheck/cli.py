@@ -15,6 +15,7 @@ import typer
 from shortcutcheck import pilot as pilot_mod
 from shortcutcheck.addenda import (
     AddendumNotCommittedError,
+    addendum_d,
     fix_poc,
     phase_a,
     phase_b,
@@ -40,6 +41,7 @@ from shortcutcheck.data.splits import (
     write_processed,
 )
 from shortcutcheck.data.validity import check_dex_date, decision
+from shortcutcheck.evaluation import addendum_d_run as d_run
 from shortcutcheck.evaluation import experiment as engine_mod
 from shortcutcheck.evaluation import rq3_ground_truth as rq3_truth
 from shortcutcheck.evaluation import rq3_signals as rq3_sig
@@ -906,6 +908,67 @@ def addendum_c(
     write_frame(result.tests, folder / "held_out_tests.csv", cfg.raw_root)
     write_text(folder / "addendum_c.md", text, cfg.raw_root)
     typer.echo(text)
+
+
+@addendum_app.command("d")
+def addendum_d_cmd(
+    part: str = typer.Option("all", help="h4, h5 or all."),
+    analyse_only: bool = typer.Option(False, help="Only re-analyse the saved tables."),
+    dry_run: bool = typer.Option(
+        False,
+        help="Same layout on validation partitions, LR and seed 11 only, 4 pool models; "
+        "no test access; not a result.",
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Addendum D: the fix on test inputs (H4) and decay on the 2015-16 holdout (H5)."""
+    if part not in ("h4", "h5", "all"):
+        raise typer.BadParameter("part must be h4, h5 or all")
+    cfg = _cfg(config)
+    try:
+        prereg = require_committed(cfg.root, addendum_d.FILE)
+    except AddendumNotCommittedError as err:
+        typer.echo(str(err))
+        raise typer.Exit(code=2) from err
+    folder = cfg.reports_dir / ("addendum_d_dry_run" if dry_run else "addendum_d")
+    commit = git_commit(cfg.root)
+    small: dict[str, object] = {"algorithms": ("lr",), "seeds": (11,)} if dry_run else {}
+    say = lambda m: typer.echo(m, err=True)  # noqa: E731
+    if part in ("h4", "all"):
+        if not analyse_only:
+            rows = d_run.run_h4(cfg, commit, dry_run=dry_run, progress=say, **small)  # type: ignore[arg-type]
+            write_frame(rows, folder / "h4_rows.csv", cfg.raw_root)
+        rows = pd.read_csv(folder / "h4_rows.csv")
+        r4 = addendum_d.judge_h4(rows)
+        write_frame(r4.held_out, folder / "h4_held_out_tests.csv", cfg.raw_root)
+        text = addendum_d.render_h4(rows, r4, addendum_d.header("--part h4", commit, prereg))
+        write_text(folder / "h4.md", text, cfg.raw_root)
+        typer.echo(text)
+    if part in ("h5", "all"):
+        if not analyse_only:
+            exp = load_experiment(Path("configs/experiments/rq3.yaml"), cfg)
+            only = None
+            if dry_run:
+                only = ["lr-q0-h0-s11", "rf-q0-h0-s11", "lgbm-q0.5-h0-s11", "mlp-q0.75-h0-s11"]
+            h5a, h5b = d_run.run_h5(
+                cfg,
+                exp,
+                commit,
+                cfg.root / "data" / "models" / exp.experiment,
+                dry_run=dry_run,
+                pool_only=only,
+                progress=say,
+                **small,  # type: ignore[arg-type]
+            )
+            write_frame(h5a, folder / "h5a_rows.csv", cfg.raw_root)
+            write_frame(h5b, folder / "h5b_pool.csv", cfg.raw_root)
+        h5a = pd.read_csv(folder / "h5a_rows.csv")
+        h5b = pd.read_csv(folder / "h5b_pool.csv")
+        ra, rb = addendum_d.judge_h5a(h5a), addendum_d.judge_h5b(h5b)
+        write_frame(rb.comparisons, folder / "h5c_comparisons.csv", cfg.raw_root)
+        text = addendum_d.render_h5(h5a, ra, rb, addendum_d.header("--part h5", commit, prereg))
+        write_text(folder / "h5.md", text, cfg.raw_root)
+        typer.echo(text)
 
 
 @app.command("prereg-check")
