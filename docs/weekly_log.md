@@ -196,3 +196,10 @@ So the proposed explanation (fix ~ dropping metadata for linear models only) is 
 Note for discussion (not tested): in-distribution reliance is tiny on the decay datasets, so the
 fix's decay benefit for linear models may come from how metadata (year) extrapolate beyond the
 training range rather than from in-distribution reliance; future work.
+Phase 4, step 4.1 (22 Nov): release gate `shortcutcheck run MODEL DATA --train TRAIN --mrs core
+--threshold 0.05 [--report report.json]` (src/shortcutcheck/gate.py, reused by 4.2 and 4.3).
+Exit 0 pass, 1 a relation exceeds the threshold, 2 bad input. Reports each relation's rate with a
+Wilson interval, flipped example apps, and MR4 per metadata field. Check passed: a known-bad model
+(predicts from metadata) fails with exit 1 and a known-good model (behaviour only) passes with
+exit 0 (tests/test_gate.py, 11 tests). Smoke run on DR-AG validation data (no test access): a
+LightGBM model fails (MR1 0.287, MR4 0.288; year alone 0.351) in about 5 s. FR20 marked done.

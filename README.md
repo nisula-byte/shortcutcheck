@@ -5,9 +5,28 @@ Android malware detectors. Final-year project, Software Engineering (IIT / Unive
 Westminster). Data: Dada, IEEE DataPort, DOI [10.21227/0frv-zb46](https://doi.org/10.21227/0frv-zb46)
 (CC BY 4.0). Feature CSVs only: no APK is ever downloaded or run.
 
-Current state: **Phase 1 done; Phase 2 (MR engine) in progress**: the MR interface, MR1–MR6 and the
-runner, realism check, known-answer tests, metrics with CIs and the RQ1 pilot are in place (Gate 2
-pilot criteria pass). The CLI gate and dashboard come in Phase 4.
+Current state: **Phases 1–3 and addenda A–E done; Phase 4 (the tool) in progress.** The release
+gate (`shortcutcheck run`, step 4.1) is in place; the pytest plugin and dashboard come next.
+
+## Check a model (the release gate)
+
+```bash
+shortcutcheck run model.joblib apps.csv --train train.csv --mrs core --threshold 0.05 \
+    --report report.json
+```
+
+- `model.joblib`: a trained scikit-learn-compatible model with `predict_proba` (load only files
+  you trust: unpickling can run code).
+- `apps.csv`: the apps to test, in Dada's feature format. **No labels are needed.**
+- `train.csv`: the labelled training data the model was trained on (column `label`, 1 = malware).
+  It is used only to fit the metamorphic relations and the realism check.
+- `--mrs`: `core` (MR1 year, MR3 size, MR4 metadata swap), `all` (adds the permission
+  relations MR5, MR6), or a list such as `MR1,MR4`.
+
+It prints each relation's violation rate with a Wilson 95% interval, plus MR4 broken down by
+metadata field, which shows *which* field the model leans on. Exit code **0** = pass,
+**1** = a relation's violation rate exceeds the threshold, **2** = bad input. `--report` writes a JSON
+report (rates, flipped example apps, per-field rates) for the dashboard.
 
 ## Quick start
 

@@ -204,9 +204,12 @@ functional:
   - id: FR20
     title: Release-gate CLI (shortcutcheck run) that exits 1 when any MR exceeds a threshold
     priority: must
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.1
+      - test:tests/test_gate.py::test_known_bad_model_fails_the_gate
+      - test:tests/test_gate.py::test_known_good_model_passes_the_gate
+      - test:tests/test_gate.py::test_missing_labels_is_a_usage_error
 
   - id: FR21
     title: pytest plugin and GitHub Actions workflow that block a merge when the gate fails
