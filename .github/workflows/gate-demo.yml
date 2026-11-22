@@ -1,0 +1,39 @@
+name: shortcutcheck-gate-demo
+
+# Roadmap 4.2: the ShortcutCheck release gate as a CI check. It trains the demo detector named in
+# examples/ci-demo/MODEL and runs the gate through the pytest plugin. A shortcut-prone model makes
+# this job fail, which blocks the merge when the check is required in branch protection.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install ShortcutCheck
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+          pip install -e . --no-deps
+      - name: Train the demo detector
+        run: python examples/ci-demo/make_demo.py
+      - name: ShortcutCheck release gate
+        working-directory: examples/ci-demo
+        run: |
+          export DEMO_MODEL="$(cat MODEL)"
+          echo "Model under test: $DEMO_MODEL"
+          pytest --shortcutcheck-reports reports
+      - name: Keep the gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shortcutcheck-report
+          path: examples/ci-demo/reports/

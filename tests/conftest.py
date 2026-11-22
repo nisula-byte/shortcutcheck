@@ -11,6 +11,8 @@ from shortcutcheck.data.register import register_zip
 from shortcutcheck.synthetic import SYNTHETIC_CANDIDATES as SYN_BASE
 from shortcutcheck.synthetic import make_synthetic_dada
 
+pytest_plugins = ["pytester"]
+
 REPO = Path(__file__).resolve().parents[1]
 
 

@@ -1,0 +1,7 @@
+train_split,n_train,n_apps,seconds,peak_mb_process,peak_mb_before_check,passed_gate
+rq12-DR-AG,7424,10000,8.03,814.4,814.4,False
+rq12-DR-AG,7424,10000,8.07,815.1,815.1,False
+rq12-DR-AG,7424,10000,7.46,815.5,815.5,False
+rq12-VS-AG,97545,10000,144.03,1994.6,1526.7,False
+rq12-VS-AG,97545,10000,164.31,1990.7,1520.7,False
+rq12-VS-AG,97545,10000,160.23,1995.2,1529.6,False

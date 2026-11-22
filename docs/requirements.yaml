@@ -204,23 +204,31 @@ functional:
   - id: FR20
     title: Release-gate CLI (shortcutcheck run) that exits 1 when any MR exceeds a threshold
     priority: must
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.1
+      - test:tests/test_gate.py::test_known_bad_model_fails_the_gate
+      - test:tests/test_gate.py::test_known_good_model_passes_the_gate
+      - test:tests/test_gate.py::test_missing_labels_is_a_usage_error
 
   - id: FR21
     title: pytest plugin and GitHub Actions workflow that block a merge when the gate fails
     priority: should
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.2
+      - test:tests/test_pytest_plugin.py::test_marker_fails_a_shortcut_prone_model
+      - test:tests/test_pytest_plugin.py::test_marker_passes_a_robust_model
+      - ci:.github/workflows/gate-demo.yml
 
   - id: FR22
     title: Dashboard of violation rates per MR and feature, loading results produced by the CLI
     priority: should
-    status: planned
+    status: done
     verified_by:
       - roadmap:4.3
+      - test:tests/test_dashboard.py::test_failing_report_shows_fail_and_drill_down
+      - test:tests/test_dashboard.py::test_passing_report_shows_pass
 
 non_functional:
   - id: NFR1
@@ -282,6 +290,7 @@ non_functional:
     status: planned
     verified_by:
       - roadmap:4.5
+      - report:reports/nfr/benchmark.md
 
   - id: NFR8
     title: Usability - a new user completes the quick-start unaided in at most 5 minutes; practitioners' median usefulness rating at least 4 of 5

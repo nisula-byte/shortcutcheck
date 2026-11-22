@@ -196,3 +196,37 @@ So the proposed explanation (fix ~ dropping metadata for linear models only) is 
 Note for discussion (not tested): in-distribution reliance is tiny on the decay datasets, so the
 fix's decay benefit for linear models may come from how metadata (year) extrapolate beyond the
 training range rather than from in-distribution reliance; future work.
+Phase 4, step 4.1 (22 Nov): release gate `shortcutcheck run MODEL DATA --train TRAIN --mrs core
+--threshold 0.05 [--report report.json]` (src/shortcutcheck/gate.py, reused by 4.2 and 4.3).
+Exit 0 pass, 1 a relation exceeds the threshold, 2 bad input. Reports each relation's rate with a
+Wilson interval, flipped example apps, and MR4 per metadata field. Check passed: a known-bad model
+(predicts from metadata) fails with exit 1 and a known-good model (behaviour only) passes with
+exit 0 (tests/test_gate.py, 11 tests). Smoke run on DR-AG validation data (no test access): a
+LightGBM model fails (MR1 0.287, MR4 0.288; year alone 0.351) in about 5 s. FR20 marked done.
+Phase 4, step 4.2 (22 Nov): pytest plugin (src/shortcutcheck/pytest_plugin.py, entry point
+pytest11): `@pytest.mark.shortcutcheck(model=..., data=..., train=...)` with the
+`shortcutcheck_report` fixture, a direct `shortcutcheck(...)` fixture, and
+`--shortcutcheck-reports DIR`. The gate now falls back to built-in Dada defaults when a project
+has no configs/phase1.yaml (GateSettings). CI demo in examples/ci-demo (synthetic data; robust
+behaviour-only model passes, shortcut-prone LightGBM fails MR1 0.255, MR4 1.000) and workflow
+.github/workflows/gate-demo.yml; template for adopters in examples/ci-demo/github-workflow-example.yml.
+7 plugin tests. Streamlit 1.67.0 pinned in requirements.txt for step 4.3. FR21 marked done.
+Phase 4, step 4.3 (22 Nov): Streamlit dashboard (src/shortcutcheck/dashboard.py, entry script
+dashboard_app.py; `shortcutcheck dashboard report.json`). Shows the verdict, rate per relation
+with Wilson intervals and the threshold, MR4 per metadata field, and a drill-down from relation
+to flipped apps to the fields that changed. It reads only JSON reports from the CLI or the pytest
+plugin; Check passed with tests that open reports written by the real CLI (tests/test_dashboard.py,
+5 tests, Streamlit AppTest). FR22 marked done.
+Phase 4, steps 4.4-4.7 (22 Nov):
+- 4.4: coverage was undercounted (73%) because the pytest plugin imported the package before
+  pytest-cov started; the plugin now imports lazily. CI now enforces --cov-fail-under=80. README
+  has a 5-minute quick-start on the synthetic CI demo. GitHub Actions did not run the last push:
+  the account's Actions spending limit or payment needs attention (Billing & plans).
+- 4.5: scripts/nfr_benchmark.py (3 repeats, fresh process each): DR-AG training (7,424 apps)
+  8.0 s and 816 MB for 10,000 apps (NFR7 met); VS-AG training (97,545 apps) 160 s and 1,995 MB
+  (time NOT met; realism search dominates). NFR7 stays planned (reports/nfr/benchmark.md).
+- 4.6: docs/evaluation/ protocol, information sheet, consent form, session guide, questionnaire,
+  response template; `shortcutcheck expert-eval` analysis with tests. Sessions wait for ethics
+  approval of the protocol and consent form (roadmap 4.6 Check).
+- 4.7: version 1.0.0, CHANGELOG.md, docs/release.md; the v1.0 tag goes on main after the merge.
+- 4.4 coverage measured locally after the lazy-import fix: 84.26% with --cov-fail-under=80, full suite green (GitHub Actions unavailable).

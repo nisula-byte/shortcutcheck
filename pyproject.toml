@@ -4,13 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shortcutcheck"
-version = "0.1.0"
+version = "1.0.0"
 description = "Label-free metamorphic testing for shortcut learning in Android malware detectors"
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
+license = { file = "LICENSE" }
 
 [project.scripts]
 shortcutcheck = "shortcutcheck.cli:app"
+
+[project.entry-points.pytest11]
+shortcutcheck = "shortcutcheck.pytest_plugin"
 
 [tool.setuptools.packages.find]
 where = ["src"]

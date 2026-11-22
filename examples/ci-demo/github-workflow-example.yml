@@ -1,0 +1,27 @@
+# Copy to .github/workflows/shortcutcheck.yml in your own repository and adjust the paths.
+# The job fails (exit code 1) when any metamorphic relation exceeds the threshold; make it a
+# required status check in branch protection to block merges of shortcut-prone models.
+name: shortcutcheck
+
+on:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "shortcutcheck @ git+https://github.com/nisula-byte/shortcutcheck@v1.0"
+      - name: ShortcutCheck release gate
+        run: >
+          shortcutcheck run models/detector.joblib data/apps.csv
+          --train data/train.csv --mrs core --threshold 0.05
+          --report shortcutcheck-report.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shortcutcheck-report
+          path: shortcutcheck-report.json

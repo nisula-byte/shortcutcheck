@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 import typer
 
+from shortcutcheck import gate as gate_mod
 from shortcutcheck import pilot as pilot_mod
 from shortcutcheck.addenda import (
     AddendumNotCommittedError,
@@ -1083,6 +1084,98 @@ def addendum_f_cmd(
     result = mechanism.judge(rows, sep)
     text = mechanism.render(rows, sep, result, mechanism.header(commit, prereg))
     write_text(folder / "addendum_f.md", text, cfg.raw_root)
+    typer.echo(text)
+
+
+@app.command("run")
+def run_gate(
+    model: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="Trained model (joblib). Load only files you trust."
+    ),
+    data: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="CSV of apps to test; labels are not needed."
+    ),
+    train: Path = typer.Option(
+        ..., "--train", exists=True, dir_okay=False, help="Labelled CSV the model was trained on."
+    ),
+    mrs: str = typer.Option("core", help="core (MR1, MR3, MR4), all, or a list such as MR1,MR4."),
+    threshold: float = typer.Option(
+        gate_mod.DEFAULT_THRESHOLD, help="Fail when any violation rate exceeds this."
+    ),
+    sample: int = typer.Option(
+        gate_mod.DEFAULT_SAMPLE, help="Test at most this many inputs (uniform sample); 0 = all."
+    ),
+    seed: int = typer.Option(gate_mod.DEFAULT_SEED, help="Seed for sampling and the relations."),
+    realism: bool = typer.Option(True, "--realism/--no-realism", help="Drop unrealistic inputs."),
+    report: Path | None = typer.Option(
+        None, help="Write the full JSON report (for the dashboard)."
+    ),
+    config: Path | None = ConfigOpt,
+) -> None:
+    """Step 4.1: metamorphic gate. Exit code 0 = pass, 1 = a relation exceeds the threshold."""
+    cfg = gate_mod.resolve_settings(config)
+    try:
+        result = gate_mod.check_files(
+            model,
+            data,
+            train,
+            cfg,
+            mrs=gate_mod.parse_mrs(mrs),
+            threshold=threshold,
+            sample=sample,
+            seed=seed,
+            realism=realism,
+        )
+    except gate_mod.GateError as err:
+        typer.echo(f"error: {err}", err=True)
+        raise typer.Exit(code=2) from err
+    typer.echo(result.render())
+    if report is not None:
+        result.write(report)
+        typer.echo(f"\nreport written to {report}")
+    if not result.passed:
+        raise typer.Exit(code=1)
+
+
+@app.command("dashboard")
+def dashboard_cmd(
+    report: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="JSON report from `shortcutcheck run --report`."
+    ),
+    port: int = typer.Option(8501, help="Port for the local Streamlit server."),
+) -> None:
+    """Step 4.3: open a gate report in the Streamlit dashboard."""
+    import subprocess
+    import sys
+
+    from shortcutcheck import dashboard_app_path
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        dashboard_app_path(),
+        "--server.port",
+        str(port),
+    ]
+    raise typer.Exit(code=subprocess.call([*cmd, "--", str(report)]))
+
+
+@app.command("expert-eval")
+def expert_eval_cmd(
+    responses: Path = typer.Argument(
+        Path("docs/evaluation/responses.csv"), exists=True, dir_okay=False
+    ),
+    out: Path = typer.Option(Path("reports/expert_eval/results.md")),
+) -> None:
+    """Step 4.6: analyse the expert questionnaire (medians per construct, NFR8)."""
+    from shortcutcheck import expert_eval
+
+    result = expert_eval.analyse(pd.read_csv(responses))
+    text = expert_eval.render(result)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
     typer.echo(text)
 
 
